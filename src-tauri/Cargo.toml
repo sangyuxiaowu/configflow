@@ -1,0 +1,13 @@
+[package]
+name = "configflow"
+version = "1.0.0"
+description = "ConfigFlow desktop application"
+authors = ["ConfigFlow"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-window-state = "2"

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient (Edge-to-Edge Full Bleed) -->
+    <linearGradient id="maskBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="45%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Dev Indigo-Violet Gradient -->
+    <linearGradient id="devGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+
+    <!-- Ops Emerald-Cyan Gradient -->
+    <linearGradient id="opsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Full-bleed background for maskable icon -->
+  <rect x="0" y="0" width="512" height="512" fill="url(#maskBgGrad)" />
+
+  <!-- Ambient Glow in Background within safe zone -->
+  <circle cx="180" cy="190" r="100" fill="#6366f1" opacity="0.22" filter="url(#glow)" />
+  <circle cx="330" cy="320" r="100" fill="#10b981" opacity="0.18" filter="url(#glow)" />
+
+  <!-- Scale and center inside the safe zone (80% circle, safe margin > 15%) -->
+  <g transform="translate(256, 256) scale(0.78) translate(-256, -256)">
+    <!-- Left Bracket: < (Representing Dev Code / Schema Definition) -->
+    <path
+      d="M 180 148 L 108 256 L 180 364"
+      fill="none"
+      stroke="url(#devGrad)"
+      stroke-width="34"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Right Bracket: > (Representing Output / Production Config) -->
+    <path
+      d="M 332 148 L 404 256 L 332 364"
+      fill="none"
+      stroke="url(#opsGrad)"
+      stroke-width="34"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Central Interactive Config Controls / Sliders -->
+    <!-- Top Track & Thumb -->
+    <line x1="194" y1="200" x2="318" y2="200" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+    <line x1="194" y1="200" x2="274" y2="200" stroke="url(#devGrad)" stroke-width="14" stroke-linecap="round" />
+    <circle cx="274" cy="200" r="18" fill="#f8fafc" stroke="#6366f1" stroke-width="6" />
+    <circle cx="274" cy="200" r="6" fill="#6366f1" />
+
+    <!-- Center Track & Thumb -->
+    <line x1="184" y1="256" x2="328" y2="256" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+    <line x1="184" y1="256" x2="236" y2="256" stroke="url(#opsGrad)" stroke-width="14" stroke-linecap="round" />
+    <circle cx="236" cy="256" r="18" fill="#f8fafc" stroke="#06b6d4" stroke-width="6" />
+    <circle cx="236" cy="256" r="6" fill="#06b6d4" />
+
+    <!-- Bottom Track & Thumb -->
+    <line x1="194" y1="312" x2="318" y2="312" stroke="#334155" stroke-width="14" stroke-linecap="round" />
+    <line x1="194" y1="312" x2="286" y2="312" stroke="url(#opsGrad)" stroke-width="14" stroke-linecap="round" />
+    <circle cx="286" cy="312" r="18" fill="#f8fafc" stroke="#10b981" stroke-width="6" />
+    <circle cx="286" cy="312" r="6" fill="#10b981" />
+
+    <!-- Decorative Status Indicator -->
+    <g transform="translate(390, 126)">
+      <circle cx="0" cy="0" r="16" fill="#0f172a" stroke="#10b981" stroke-width="4.5" />
+      <path d="M -6 0 L -1 5 L 7 -4" fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+  </g>
+</svg>

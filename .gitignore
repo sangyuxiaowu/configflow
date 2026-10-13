@@ -1,0 +1,12 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+dev-dist/
+/src-tauri/target/
+/src-tauri/gen/
+/src-tauri/icons/

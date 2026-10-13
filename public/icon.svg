@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+
+    <!-- Dev Indigo-Violet Gradient -->
+    <linearGradient id="devGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#a855f7" />
+    </linearGradient>
+
+    <!-- Ops Emerald-Cyan Gradient -->
+    <linearGradient id="opsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+
+    <!-- Amber Spark Gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+
+    <!-- Glass Overlay Gradient -->
+    <linearGradient id="glassGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.12" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.02" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Outer Squircle Body -->
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="url(#bgGrad)" stroke="#334155" stroke-width="3" filter="url(#softShadow)" />
+
+  <!-- Inner Subtle Border Highlight -->
+  <rect x="26" y="26" width="460" height="460" rx="102" fill="none" stroke="url(#glassGrad)" stroke-width="2" />
+
+  <!-- Ambient Glow Blobs in Background -->
+  <circle cx="160" cy="180" r="110" fill="#6366f1" opacity="0.18" filter="url(#glow)" />
+  <circle cx="350" cy="330" r="110" fill="#10b981" opacity="0.15" filter="url(#glow)" />
+
+  <!-- Grid Blueprint Dots (Developer Schema Subtlety) -->
+  <g fill="#475569" opacity="0.35">
+    <circle cx="96" cy="96" r="3" />
+    <circle cx="144" cy="96" r="3" />
+    <circle cx="368" cy="96" r="3" />
+    <circle cx="416" cy="96" r="3" />
+    <circle cx="96" cy="416" r="3" />
+    <circle cx="144" cy="416" r="3" />
+    <circle cx="368" cy="416" r="3" />
+    <circle cx="416" cy="416" r="3" />
+  </g>
+
+  <!-- Center Config Symbol: Interlocking Code Bracket & Visual Control Sliders -->
+  <g id="mainIconGroup" transform="translate(0, 0)">
+    <!-- Left Bracket: < (Representing Dev Code / Schema Definition) -->
+    <path
+      d="M 190 148 L 118 256 L 190 364"
+      fill="none"
+      stroke="url(#devGrad)"
+      stroke-width="32"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Right Bracket: > (Representing Output / Production Config) -->
+    <path
+      d="M 322 148 L 394 256 L 322 364"
+      fill="none"
+      stroke="url(#opsGrad)"
+      stroke-width="32"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+
+    <!-- Central Interactive Config Controls / Sliders (Representing Ops Visual Configuration) -->
+    <!-- Top Track & Thumb -->
+    <line x1="200" y1="200" x2="312" y2="200" stroke="#334155" stroke-width="12" stroke-linecap="round" />
+    <line x1="200" y1="200" x2="274" y2="200" stroke="url(#devGrad)" stroke-width="12" stroke-linecap="round" />
+    <circle cx="274" cy="200" r="16" fill="#f8fafc" stroke="#6366f1" stroke-width="6" />
+    <circle cx="274" cy="200" r="5" fill="#6366f1" />
+
+    <!-- Center Track & Thumb (Ops Switch / Safe Boundary Node) -->
+    <line x1="192" y1="256" x2="320" y2="256" stroke="#334155" stroke-width="12" stroke-linecap="round" />
+    <line x1="192" y1="256" x2="236" y2="256" stroke="url(#opsGrad)" stroke-width="12" stroke-linecap="round" />
+    <circle cx="236" cy="256" r="16" fill="#f8fafc" stroke="#06b6d4" stroke-width="6" />
+    <circle cx="236" cy="256" r="5" fill="#06b6d4" />
+
+    <!-- Bottom Track & Thumb (Verified / Active Toggle) -->
+    <line x1="200" y1="312" x2="312" y2="312" stroke="#334155" stroke-width="12" stroke-linecap="round" />
+    <line x1="200" y1="312" x2="286" y2="312" stroke="url(#opsGrad)" stroke-width="12" stroke-linecap="round" />
+    <circle cx="286" cy="312" r="16" fill="#f8fafc" stroke="#10b981" stroke-width="6" />
+    <circle cx="286" cy="312" r="5" fill="#10b981" />
+
+    <!-- Decorative Status Sparkle / Validation Indicator at Upper Right -->
+    <g transform="translate(380, 126)">
+      <circle cx="0" cy="0" r="14" fill="#0f172a" stroke="#10b981" stroke-width="4" />
+      <path d="M -5 0 L -1 4 L 6 -3" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    </g>
+  </g>
+</svg>
