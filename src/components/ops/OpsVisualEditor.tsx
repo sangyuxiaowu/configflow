@@ -691,6 +691,7 @@ export const OpsVisualEditor: React.FC<OpsVisualEditorProps> = ({
         baselineConfig={activeReference?.config || null}
         baselineName={activeReference?.name || null}
         fields={schemaPackage.fields}
+        outputFormat={schemaPackage.outputFormat || 'json'}
         errors={errors}
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
@@ -701,6 +702,8 @@ export const OpsVisualEditor: React.FC<OpsVisualEditorProps> = ({
         isOpen={isLoadCurrentConfigModalOpen}
         onClose={() => setIsLoadCurrentConfigModalOpen(false)}
         onConfirm={handleLoadCurrentConfig}
+        format={schemaPackage.outputFormat || 'json'}
+        knownPaths={schemaPackage.fields.map((field) => field.path)}
       />
     </div>
   );

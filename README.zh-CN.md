@@ -47,7 +47,7 @@
 ## ✨ 核心特性
 
 ### 1. 🛠️ 开发设计端 (Dev Schema Designer)
-- **智能 Schema 推断**：支持一键粘贴或上传全量业务 JSON，系统自动递归推断字段类型、默认值与层级嵌套。
+- **智能 Schema 推断**：支持粘贴或上传 JSON、YAML、Properties、ENV 配置，也可从远程 URL 抓取；系统自动递归推断字段类型、默认值与层级嵌套。
 - **11 种强类型字段支持**：
   - 基础类型：`string`（文本）、`number`（数字）、`boolean`（开关）、`enum`（枚举字典）
   - 网络与安全：`port`（网络端口校验 1-65535）、`ip`（IPv4 地址合规校验）、`url`（网络协议地址）、`secret`（密码/Token 遮罩脱敏）
@@ -66,10 +66,11 @@
 - **参考架构一键套用与抽屉对比**：右侧抽屉式展示架构范例，可随时点击一键套用至当前配置。
 - **变更差异对比 (Diff Viewer)**：清晰高亮展示新增、修改与删除的字段及前后取值变化。
 - **多格式导出与下载**：
-  - 导出生产就绪的格式化 `JSON`
-  - 导出 `YAML` 格式
-  - 导出 `.env` 环境变量格式
-  - 导出全量 `Schema Package`（供后续持续维护）
+  - 业务配置支持 `JSON`、`YAML`、`Properties` 和 `ENV` 格式
+  - 可在开发设计端设置 `outputFormat`，控制默认模板与运维端最终配置的产出格式；未设置时默认为 `JSON`
+  - 全量 `Schema Package` 始终以 JSON 导入、导出，与业务配置产出格式相互独立
+
+Properties 使用点分层级键；ENV 导出使用大写下划线变量名，并以 `__` 分隔层级，导入时匹配 Schema 已知字段不区分大小写。Properties/ENV 中的数组和对象以 JSON 值编码；若多个字段路径映射到同一个 ENV 变量名，导入或导出会报错，避免静默覆盖。
 
 ### 3. 🌐 远程集成与免登录加载
 - 支持 URL Query 参数直接远程装载配置或 Schema：
@@ -117,6 +118,7 @@
 │   │   └── config.ts       # 核心数据模型 (FieldDefinition, ConfigSchemaPackage, ValidationError)
 │   ├── utils/
 │   │   ├── schemaInfer.ts  # JSON 自动推断与 Schema 解析引擎
+│   │   ├── configFormats.ts # JSON、YAML、Properties、ENV 解析与序列化
 │   │   └── validator.ts    # 字段约束与合规性校验引擎
 │   ├── App.tsx             # 应用主入口与双端切换逻辑
 │   ├── index.css           # 全局样式 (Tailwind v4)
@@ -185,7 +187,7 @@ Tauri 构建会自动生成桌面图标，并使用不含 PWA Service Worker 的
 
 ### 场景一：开发人员定制配置模板
 1. 进入系统后切换至顶部 **「开发端 (Schema 规则设计)」**。
-2. 点击 **「导入 JSON 自动生成」**，将现有的配置文件 JSON 粘贴进弹窗，点击 **「解析并生成 Schema」**。
+2. 点击 **「导入配置并生成规范」**，粘贴或上传 JSON、YAML、Properties、ENV 配置，也可输入远程配置 URL；粘贴内容会自动识别格式，文件和 URL 按扩展名识别。
 3. 系统将自动生成所有字段列表：
    - 补充中文标签（Label）与详细说明（Description）。
    - 设置关键字段的约束范围（端口范围、正则表达式、枚举列表）。
@@ -198,4 +200,4 @@ Tauri 构建会自动生成桌面图标，并使用不含 PWA Service Worker 的
 2. 界面将呈现清晰分类的表单卡片，支持实时填写、勾选与下拉选择。
 3. 可点击右上角 **「参考架构样例」** 抽屉，查看开发推荐的规格配置，并支持一键将参考值载入表单。
 4. 编辑过程中，校验引擎会实时提示红色阻断错误与黄色警告。
-5. 编辑完成后，点击 **「导出/下载配置」**，在弹窗中查看变更 Diff 并直接下载格式化后的 `JSON` 或 `YAML`。
+5. 编辑完成后，点击 **「导出/下载配置」**，在弹窗中查看变更 Diff 并下载格式化后的配置。产出格式遵循规范包的 `outputFormat`，支持 `JSON`、`YAML`、`Properties`、`ENV`，默认是 `JSON`。

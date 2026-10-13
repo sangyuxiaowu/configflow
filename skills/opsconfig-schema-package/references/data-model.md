@@ -78,6 +78,7 @@ export interface ConfigSchemaPackage {
   id: string;               // 规范包唯一标识 (如 "pkg-gateway-service")
   name: string;             // 规范包名称 (如 "API 网关服务配置约束规范")
   version: string;          // 语义化版本号 (如 "1.0.0")
+  outputFormat?: 'json' | 'yaml' | 'properties' | 'env'; // 业务配置产出格式，缺省为 JSON
   description: string;      // 规范包整体说明
   author: string;           // 制定团队或架构师姓名 (如 "基础架构平台组")
   updatedAt: string;        // 制定日期 (YYYY-MM-DD 格式)
@@ -87,6 +88,8 @@ export interface ConfigSchemaPackage {
   defaultConfig: Record<string, any>;
 }
 ```
+
+`outputFormat` 仅控制业务配置模板和最终配置的序列化格式；约束规范包本身仍以 JSON 导入、导出。Properties 使用点分层级键，ENV 使用大写下划线键并以 `__` 分隔层级；Properties/ENV 中数组和对象以 JSON 值编码。若多个字段路径归一化为同一个 ENV 变量名，导入或导出会报错以避免静默覆盖。
 
 ## 路径约定
 

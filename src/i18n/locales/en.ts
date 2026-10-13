@@ -199,7 +199,7 @@ export const enLocale: TranslationDictionary = {
     title: 'Developer Schema Designer',
     subtitle: 'Architects and engineers define field boundaries, documentation, multi-profile baselines, and safety guards',
     createBlankSchema: 'Create Blank Schema',
-    importJson: 'Import Raw JSON',
+    importJson: 'Import Config & Generate Schema',
     exportPackage: 'Export Schema Package',
     referenceProfiles: 'Reference Baselines ({count})',
     previewOpsWorkbench: 'Preview Ops Workbench',

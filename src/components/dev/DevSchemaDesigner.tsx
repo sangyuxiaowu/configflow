@@ -730,6 +730,27 @@ export const DevSchemaDesigner: React.FC<DevSchemaDesignerProps> = ({
 
               <div>
                 <label className="text-xs font-medium text-slate-300 block mb-1">
+                  {language === 'en' ? 'Configuration output format' : '配置产出格式'}
+                </label>
+                <select
+                  value={schemaPackage.outputFormat || 'json'}
+                  onChange={(e) =>
+                    onUpdateSchemaPackage({
+                      ...schemaPackage,
+                      outputFormat: e.target.value as ConfigSchemaPackage['outputFormat'],
+                    })
+                  }
+                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white"
+                >
+                  <option value="json">JSON</option>
+                  <option value="yaml">YAML (.yml)</option>
+                  <option value="properties">Properties</option>
+                  <option value="env">ENV</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
                   {t.dev.schemaAuthor}
                 </label>
                 <input

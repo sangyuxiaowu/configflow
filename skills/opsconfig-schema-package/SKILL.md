@@ -21,6 +21,7 @@ metadata:
 
 - 必须包含 `id`, `name`, `version`, `description`, `author`, `updatedAt`, `categories`, `fields`, `referenceExamples`, `defaultConfig`。
 - `defaultConfig` 与 `referenceExamples[].config` 中的每个字段路径与键名，必须与 `fields` 中的 `path` / `key` 完全一致。
+- `outputFormat` 可选，支持 `json`、`yaml`、`properties`、`env`，缺省按 `json`；该字段控制业务配置产出格式，约束规范包仍为 JSON。
 - 仅输出合法的纯 JSON。系统识别条件：顶层含 `fields` 数组，且首个字段包含 `key` 或 `path`。
 
 ## 生成工作流

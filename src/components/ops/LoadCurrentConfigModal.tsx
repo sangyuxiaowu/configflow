@@ -11,20 +11,25 @@ import {
 } from 'lucide-react';
 import { useToast } from '../common/Toast';
 import { useI18n } from '../../i18n';
+import { ConfigFormat, detectConfigFormat, parseConfigText, stringifyConfig } from '../../utils/configFormats';
 
 interface LoadCurrentConfigModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (config: Record<string, any>, sourceName: string) => void;
+  format: ConfigFormat;
+  knownPaths: string[];
 }
 
 export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
+  format,
+  knownPaths,
 }) => {
   const { showToast } = useToast();
-  const { t, format, language } = useI18n();
+  const { t, language } = useI18n();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tab: 'upload' | 'paste'
@@ -47,26 +52,27 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
   if (!isOpen) return null;
 
   // Process and validate JSON text
-  const parseJsonContent = (
+  const parseConfigContent = (
     text: string,
-    source: 'upload' | 'paste'
+    source: 'upload' | 'paste',
+    contentFormat: ConfigFormat
   ): Record<string, any> | null => {
     try {
       if (!text.trim()) {
         throw new Error(
           language === 'en'
-            ? 'Configuration content is empty, please input valid JSON text'
-            : '配置内容为空，请输入有效的 JSON 文本'
+            ? 'Configuration content is empty'
+            : '配置内容为空'
         );
       }
 
-      const parsed = JSON.parse(text);
+      const parsed = parseConfigText(text, contentFormat, knownPaths);
 
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
         throw new Error(
           language === 'en'
-            ? 'Configuration file must be a top-level JSON key-value object'
-            : '配置文件必须为顶层 JSON 键值对对象 (Key-Value Object)，不支持顶级数组或单一基础类型'
+            ? 'Configuration file must contain a top-level key-value object'
+            : '配置文件必须为顶层键值对对象，不支持顶级数组或单一基础类型'
         );
       }
 
@@ -74,8 +80,8 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
       if (keyCount === 0) {
         throw new Error(
           language === 'en'
-            ? 'Parsed JSON object does not contain any configuration keys'
-            : '解析到的 JSON 对象中未包含任何配置参数'
+            ? 'Configuration object does not contain any keys'
+            : '解析到的配置对象中未包含任何配置参数'
         );
       }
 
@@ -87,11 +93,9 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
       }
       return parsed;
     } catch (err: any) {
-      const errMsg =
-        err.message ||
-        (language === 'en'
-          ? 'Failed to parse JSON syntax, please check format'
-          : 'JSON 语法解析失败，请检查格式是否规范');
+      const errMsg = language === 'en'
+        ? `Failed to parse ${contentFormat.toUpperCase()} syntax: ${err.message}`
+        : `${contentFormat.toUpperCase()} 语法解析失败：${err.message}`;
       if (source === 'upload') {
         setUploadError(errMsg);
         setUploadedFile(null);
@@ -105,20 +109,11 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
 
   // Handle file reading
   const handleFileProcess = (file: File) => {
-    if (!file.name.endsWith('.json') && file.type !== 'application/json') {
-      setUploadError(
-        language === 'en'
-          ? 'Only .json format configuration files are supported'
-          : '仅支持上传 .json 格式的配置文件'
-      );
-      setUploadedFile(null);
-      return;
-    }
-
+    const fileFormat = detectConfigFormat(file.name, format);
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const data = parseJsonContent(text, 'upload');
+      const data = parseConfigContent(text, 'upload', fileFormat);
       if (data) {
         setUploadedFile({
           name: file.name,
@@ -151,7 +146,7 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
   const handlePasteChange = (val: string) => {
     setPasteContent(val);
     if (val.trim()) {
-      parseJsonContent(val, 'paste');
+      parseConfigContent(val, 'paste', format);
     } else {
       setPasteError(null);
       setPasteParsedData(null);
@@ -160,8 +155,12 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
 
   const handleFormatPaste = () => {
     if (pasteParsedData) {
-      setPasteContent(JSON.stringify(pasteParsedData, null, 2));
-      showToast(language === 'en' ? 'JSON formatted' : 'JSON 已格式化美化', 'info');
+      try {
+        setPasteContent(stringifyConfig(pasteParsedData, format));
+        showToast(language === 'en' ? `${format.toUpperCase()} formatted` : `${format.toUpperCase()} 已格式化`, 'info');
+      } catch (error) {
+        setPasteError(error instanceof Error ? error.message : String(error));
+      }
     }
   };
 
@@ -174,7 +173,7 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
       onConfirm(uploadedFile.data, uploadedFile.name);
       onClose();
     } else if (activeTab === 'paste' && pasteParsedData) {
-      const sourceName = language === 'en' ? 'Pasted Config JSON' : '手动粘贴的配置 JSON';
+      const sourceName = language === 'en' ? `Pasted Config ${format.toUpperCase()}` : `手动粘贴的配置 ${format.toUpperCase()}`;
       onConfirm(pasteParsedData, sourceName);
       onClose();
     }
@@ -193,7 +192,7 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
               </h2>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              {t.loadConfigModal.subtitle}
+              {t.loadConfigModal.subtitle} · {format.toUpperCase()}
             </p>
           </div>
           <button
@@ -258,7 +257,7 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".json,application/json"
+                  accept=".json,.yaml,.yml,.properties,.env,application/json,text/yaml,text/plain"
                   onChange={handleFileChange}
                   className="hidden"
                 />
@@ -270,8 +269,8 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1">
                   {language === 'en'
-                    ? 'Supports standard production configs (e.g. config.json, app.json, settings.json)'
-                    : '支持标准生产环境配置文件 (如 config.json、app.json、settings.json)'}
+                    ? 'Supports JSON, YAML, Properties, and ENV configuration files'
+                    : '支持 JSON、YAML、Properties、ENV 配置文件；按扩展名解析，未知扩展名使用规范格式'}
                 </p>
               </div>
 
@@ -356,7 +355,7 @@ export const LoadCurrentConfigModal: React.FC<LoadCurrentConfigModalProps> = ({
               <textarea
                 value={pasteContent}
                 onChange={(e) => handlePasteChange(e.target.value)}
-                placeholder={'{\n  "server": {\n    "port": 8080,\n    "host": "0.0.0.0"\n  }\n}'}
+                placeholder={format === 'yaml' ? 'server:\n  port: 8080\n  host: 0.0.0.0' : format === 'properties' ? 'server.port=8080\nserver.host=0.0.0.0' : format === 'env' ? 'SERVER__PORT=8080\nSERVER__HOST=0.0.0.0' : '{\n  "server": {\n    "port": 8080,\n    "host": "0.0.0.0"\n  }\n}'}
                 rows={10}
                 className="w-full p-3 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-600 focus:outline-hidden focus:border-emerald-500 leading-relaxed"
               />

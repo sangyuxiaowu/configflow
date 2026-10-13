@@ -66,7 +66,7 @@ In distributed systems, microservice architectures, and on-premise private deplo
 ## ✨ Key Features
 
 ### 1. 🛠️ Dev Schema Designer
-- **Intelligent Schema Inference**: One-click paste or upload of full production JSON; system recursively infers field types, default values, and nested hierarchies.
+- **Intelligent Schema Inference**: Paste or upload JSON, YAML, Properties, or ENV configuration, or fetch it from a remote URL; the system recursively infers field types, default values, and nested hierarchies.
 - **11 Strongly Typed Field Kinds**:
   - Basic types: `string` (text), `number` (numeric), `boolean` (toggle), `enum` (dictionary / options)
   - Network & Security: `port` (network port 1–65535 validation), `ip` (IPv4 validation), `url` (protocol URL), `secret` (masked password / token)
@@ -85,10 +85,11 @@ In distributed systems, microservice architectures, and on-premise private deplo
 - **One-Click Reference Architecture Adoption & Drawer**: Right-side drawer showcases architectural reference examples, ready to be applied into the active configuration with a single click.
 - **Diff Viewer**: Clearly highlights added, modified, and deleted fields along with before-and-after values.
 - **Multi-Format Export & Download**:
-  - Export production-ready formatted `JSON`
-  - Export `YAML`
-  - Export `.env` environment variable format
-  - Export full `Schema Package` (for continuous maintenance)
+  - Business configurations support `JSON`, `YAML`, `Properties`, and `ENV`
+  - Set `outputFormat` in the Dev Schema Designer to control the default template and final Ops configuration; defaults to `JSON`
+  - Full `Schema Packages` are always imported and exported as JSON, independently of the business configuration format
+
+Properties uses dotted keys for nested paths. ENV exports use uppercase underscore variable names with `__` between path segments; matching imported names to known schema fields is case-insensitive. Arrays and objects in Properties/ENV values are encoded as JSON; imports and exports reject paths that normalize to the same ENV variable name to prevent silent overwrites.
 
 ### 3. 🌐 Remote Integration & URL Query Loading
 - Support URL query parameters to remotely load configs or schemas:
@@ -136,6 +137,7 @@ In distributed systems, microservice architectures, and on-premise private deplo
 │   │   └── config.ts       # Core data models (FieldDefinition, ConfigSchemaPackage, ValidationError)
 │   ├── utils/
 │   │   ├── schemaInfer.ts  # JSON automatic inference and schema parsing engine
+│   │   ├── configFormats.ts # JSON, YAML, Properties, and ENV parsing and serialization
 │   │   └── validator.ts    # Field constraint and compliance validation engine
 │   ├── App.tsx             # Application entry and dual-end toggle logic
 │   ├── index.css           # Global stylesheet (Tailwind v4)
@@ -204,7 +206,7 @@ The Tauri build automatically generates desktop icons and bundles the web fronte
 
 ### Scenario 1: Developer Customizing Configuration Templates
 1. Switch to **"Dev (Schema Design)"** in the top navigation bar.
-2. Click **"Import JSON to Auto Generate"**, paste your existing JSON configuration into the dialog, and click **"Parse and Generate Schema"**.
+2. Click **"Import Config & Generate Schema"** and paste or upload a JSON, YAML, Properties, or ENV config, or provide a remote config URL. Pasted content is auto-detected; files and URLs are detected by extension.
 3. The system automatically populates all field definitions:
    - Provide human-readable labels and descriptions.
    - Set constraint ranges (port limits, regex patterns, enum options).
@@ -217,6 +219,6 @@ The Tauri build automatically generates desktop icons and bundles the web fronte
 2. The interface displays clearly categorized form cards supporting instant input, toggles, and dropdowns.
 3. Click the **"Reference Examples"** drawer on the right to review developer recommendations and load them into the form with one click.
 4. During editing, the validation engine provides real-time alerts for blocking errors (red) and warnings (yellow).
-5. When finished, click **"Export / Download Config"** to review the change diff and download formatted `JSON` or `YAML`.
+5. When finished, click **"Export / Download Config"** to review the change diff and download the formatted configuration. The schema package's `outputFormat` controls the output (`JSON`, `YAML`, `Properties`, or `ENV`); it defaults to `JSON`.
 
 ---

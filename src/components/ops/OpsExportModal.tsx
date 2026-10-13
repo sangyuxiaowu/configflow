@@ -23,6 +23,7 @@ import {
 import { getValueByPath } from '../../utils/schemaInfer';
 import { useToast } from '../common/Toast';
 import { useI18n } from '../../i18n';
+import { ConfigFormat, configFileExtension, stringifyConfig } from '../../utils/configFormats';
 
 interface OpsExportModalProps {
   currentConfig: Record<string, any>;
@@ -31,6 +32,7 @@ interface OpsExportModalProps {
   baselineConfig?: Record<string, any> | null;
   baselineName?: string | null;
   fields: FieldDefinition[];
+  outputFormat: ConfigFormat;
   errors: ValidationError[];
   isOpen: boolean;
   onClose: () => void;
@@ -43,6 +45,7 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
   baselineConfig,
   baselineName,
   fields,
+  outputFormat,
   errors,
   isOpen,
   onClose,
@@ -82,10 +85,16 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
   const [diffFilter, setDiffFilter] = useState<'changed' | 'all'>('changed');
   const [diffSearch, setDiffSearch] = useState('');
 
-  // 格式化输出最终生产 JSON
-  const jsonString = useMemo(() => {
-    return JSON.stringify(currentConfig, null, 2);
-  }, [currentConfig]);
+  const { outputString, outputError } = useMemo(
+    () => {
+      try {
+        return { outputString: stringifyConfig(currentConfig, outputFormat), outputError: null };
+      } catch (error) {
+        return { outputString: '', outputError: error instanceof Error ? error.message : String(error) };
+      }
+    },
+    [currentConfig, outputFormat]
+  );
 
   // 计算多维字段对比数据
   const comparisonItems = useMemo(() => {
@@ -168,7 +177,8 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
     window.parent !== window;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(jsonString);
+    if (outputError) return;
+    navigator.clipboard.writeText(outputString);
     setCopied(true);
     showToast(t.opsExport.copiedSuccess, 'success');
     if (isEmbedded) {
@@ -186,8 +196,11 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
   };
 
   const handleDownload = () => {
-    const filename = `config.production.json`;
-    const blob = new Blob([jsonString], { type: 'application/json' });
+    if (outputError) return;
+    const extension = configFileExtension(outputFormat);
+    const filename = `config.production.${extension}`;
+    const mimeType = outputFormat === 'json' ? 'application/json' : outputFormat === 'yaml' ? 'application/yaml' : 'text/plain';
+    const blob = new Blob([outputString], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -389,7 +402,7 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
               )}
             </button>
 
-            {/* 最终 JSON 预览 Tab 按钮 */}
+            {/* 最终配置预览 Tab 按钮 */}
             <button
               type="button"
               onClick={() => setActiveTab('json')}
@@ -400,7 +413,7 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
               }`}
             >
               <FileJson className="w-3.5 h-3.5" />
-              <span>{language === 'en' ? 'JSON Preview' : '最终 JSON 预览'}</span>
+              <span>{language === 'en' ? `${outputFormat.toUpperCase()} Preview` : `最终 ${outputFormat.toUpperCase()} 预览`}</span>
             </button>
           </div>
         </div>
@@ -579,11 +592,11 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
               )}
             </div>
           ) : (
-            /* 最终 JSON 预览模式 */
+            /* 最终配置预览模式 */
             <div className="space-y-2">
               <div className="bg-slate-950 rounded-xl p-4 border border-slate-800/80">
                 <pre className="text-xs font-mono text-emerald-300/90 leading-relaxed overflow-x-auto whitespace-pre selection:bg-emerald-800/50">
-                  {jsonString}
+                  {outputError || outputString}
                 </pre>
               </div>
             </div>
@@ -592,16 +605,17 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/90">
-          <span className="text-xs text-slate-400">
-            {language === 'en'
+          <span className={`text-xs min-w-0 flex-1 break-words ${outputError ? 'text-rose-400' : 'text-slate-400'}`}>
+            {outputError || (language === 'en'
               ? 'Ready. All parameters strictly adhere to developer constraints.'
-              : '已就绪，所有参数均已遵循开发设定的安全约束'}
+              : '已就绪，所有参数均已遵循开发设定的安全约束')}
           </span>
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={handleCopy}
-              className="px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors"
+              disabled={Boolean(outputError)}
+              className="px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? (
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -622,7 +636,8 @@ export const OpsExportModal: React.FC<OpsExportModalProps> = ({
             <button
               type="button"
               onClick={handleDownload}
-              className="px-4 py-2 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+              disabled={Boolean(outputError)}
+              className="px-4 py-2 text-xs font-medium text-white bg-emerald-600 hover:bg-emerald-500 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5" />
               {t.opsExport.downloadBtn}

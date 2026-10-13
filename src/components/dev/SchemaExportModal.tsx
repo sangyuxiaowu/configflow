@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Download, Copy, Check, FileJson, Package, ShieldCheck } from 'lucide-react';
 import { ConfigSchemaPackage } from '../../types/config';
 import { useToast } from '../common/Toast';
+import { ConfigFormat, configFileExtension, stringifyConfig } from '../../utils/configFormats';
 
 interface SchemaExportModalProps {
   schemaPackage: ConfigSchemaPackage;
@@ -21,27 +22,41 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
   if (!isOpen) return null;
 
   const schemaJsonString = JSON.stringify(schemaPackage, null, 2);
-  const templateJsonString = JSON.stringify(schemaPackage.defaultConfig, null, 2);
-  const activeContent = activeTab === 'schema' ? schemaJsonString : templateJsonString;
+  const outputFormat: ConfigFormat = schemaPackage.outputFormat || 'json';
+  let templateString = '';
+  let templateError: string | null = null;
+  try {
+    templateString = stringifyConfig(schemaPackage.defaultConfig, outputFormat);
+  } catch (error) {
+    templateError = error instanceof Error ? error.message : String(error);
+  }
+  const activeContent = activeTab === 'schema' ? schemaJsonString : templateString;
 
   const handleCopy = () => {
+    if (activeTab === 'template' && templateError) return;
     navigator.clipboard.writeText(activeContent);
     setCopied(true);
     showToast(
       activeTab === 'schema'
         ? '已复制完整 Schema 约束规范 JSON'
-        : '已复制默认配置模板 JSON',
+        : `已复制默认配置模板 ${outputFormat.toUpperCase()}`,
       'success'
     );
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownload = () => {
+    if (activeTab === 'template' && templateError) return;
     const filename =
       activeTab === 'schema'
         ? `${schemaPackage.id || 'config-schema'}.json`
-        : `config.default.json`;
-    const blob = new Blob([activeContent], { type: 'application/json' });
+        : `config.default.${configFileExtension(outputFormat)}`;
+    const mimeType = activeTab === 'schema' || outputFormat === 'json'
+      ? 'application/json'
+      : outputFormat === 'yaml'
+        ? 'application/yaml'
+        : 'text/plain';
+    const blob = new Blob([activeContent], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -101,39 +116,41 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
               }`}
             >
               <FileJson className="w-3.5 h-3.5" />
-              纯净默认配置 (config.default.json)
+              纯净默认配置 (config.default.{configFileExtension(outputFormat)})
             </button>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}
-              className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors"
+              disabled={activeTab === 'template' && Boolean(templateError)}
+              className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? '已复制' : '复制 JSON'}
+              {copied ? '已复制' : activeTab === 'schema' ? '复制规范 JSON' : `复制 ${outputFormat.toUpperCase()}`}
             </button>
             <button
               onClick={handleDownload}
-              className="px-3.5 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm"
+              disabled={activeTab === 'template' && Boolean(templateError)}
+              className="px-3.5 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5" />
-              下载 JSON 文件
+              {activeTab === 'schema' ? '下载规范 JSON' : `下载 ${outputFormat.toUpperCase()} 配置`}
             </button>
           </div>
         </div>
 
         {/* Code Content */}
         <div className="flex-1 overflow-y-auto p-4 bg-slate-950">
-          <pre className="text-xs font-mono text-indigo-200/90 leading-relaxed overflow-x-auto whitespace-pre selection:bg-indigo-700/50">
-            {activeContent}
+          <pre className={`text-xs font-mono ${activeTab === 'template' && templateError ? 'text-rose-400' : 'text-indigo-200/90'} leading-relaxed overflow-x-auto whitespace-pre selection:bg-indigo-700/50`}>
+            {activeTab === 'template' && templateError ? templateError : activeContent}
           </pre>
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-800 bg-slate-900/90 text-xs text-slate-400">
           <span>
-            文件大小: {(new Blob([activeContent]).size / 1024).toFixed(1)} KB · 格式: JSON RFC 8259
+            文件大小: {(new Blob([activeContent]).size / 1024).toFixed(1)} KB · 格式: {activeTab === 'schema' ? 'Schema JSON' : outputFormat.toUpperCase()}
           </span>
           <button
             onClick={onClose}

@@ -26,6 +26,12 @@
       "type": "string",
       "description": "SemVer string, e.g. 1.0.0"
     },
+    "outputFormat": {
+      "type": "string",
+      "enum": ["json", "yaml", "properties", "env"],
+      "default": "json",
+      "description": "Serialization format for generated business configuration; schema packages remain JSON"
+    },
     "description": {
       "type": "string",
       "description": "Detailed explanation of the configuration schema package"

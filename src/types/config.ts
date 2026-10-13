@@ -79,6 +79,7 @@ export interface ConfigSchemaPackage {
   id: string;
   name: string;
   version: string;
+  outputFormat?: 'json' | 'yaml' | 'properties' | 'env';
   description: string;
   author?: string;
   updatedAt: string;

@@ -13,6 +13,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { inferSchemaFromJson } from '../../utils/schemaInfer';
+import { ConfigFormat, detectConfigFormat, detectConfigFormatFromContent, parseConfigText, stringifyConfig } from '../../utils/configFormats';
 import { FieldDefinition, ConfigCategory } from '../../types/config';
 
 interface JsonImportModalProps {
@@ -121,6 +122,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
   onImport,
 }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'paste' | 'remote'>('paste');
+  const [configFormat, setConfigFormat] = useState<ConfigFormat>('json');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Upload state
@@ -146,13 +148,18 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
   // Schema metadata
   const [schemaName, setSchemaName] = useState('分布式集群配置规范');
   const [schemaDesc, setSchemaDesc] = useState(
-    '根据原始业务 JSON 解析生成，定义节点集群、网络端口与故障转移约束'
+    '根据原始业务配置解析生成，定义节点集群、网络端口与故障转移约束'
   );
 
   if (!isOpen) return null;
 
   // Validate and parse raw JSON
-  const handleParseString = (text: string, defaultName?: string, defaultDesc?: string) => {
+  const handleParseString = (
+    text: string,
+    defaultName?: string,
+    defaultDesc?: string,
+    format: ConfigFormat = configFormat
+  ) => {
     if (!text.trim()) {
       setParsedRawJson(null);
       setParseError(null);
@@ -160,9 +167,9 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
     }
 
     try {
-      const parsed = JSON.parse(text);
+      const parsed = parseConfigText(text, format);
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-        setParseError('原始配置必须是标准的 JSON Object (键值对对象)，不能是顶层数组');
+        setParseError('原始配置必须是顶层键值对对象，不能是数组或单一基础类型');
         setParsedRawJson(null);
         return;
       }
@@ -172,7 +179,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       if (defaultName) setSchemaName(defaultName);
       if (defaultDesc) setSchemaDesc(defaultDesc);
     } catch (err: any) {
-      setParseError(`JSON 语法解析错误: ${err.message}`);
+      setParseError(`${format.toUpperCase()} 语法解析错误: ${err.message}`);
       setParsedRawJson(null);
     }
   };
@@ -186,6 +193,8 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
 
   const processFile = (file: File) => {
     setUploadedFile(file);
+    const format = detectConfigFormat(file.name);
+    setConfigFormat(format);
     const reader = new FileReader();
     reader.onload = (event) => {
       const content = event.target?.result as string;
@@ -194,7 +203,8 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       handleParseString(
         content,
         `${baseName} 约束规范`,
-        `从原始文件「${file.name}」解析，供定制字段规则`
+        `从原始文件「${file.name}」解析，供定制字段规则`,
+        format
       );
     };
     reader.onerror = () => {
@@ -225,42 +235,50 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
 
   // Paste handlers
   const handlePasteChange = (val: string) => {
+    const format = detectConfigFormatFromContent(val);
+    setConfigFormat(format);
     setJsonText(val);
-    handleParseString(val);
+    handleParseString(val, undefined, undefined, format);
   };
 
   const handlePasteFromClipboard = async () => {
     try {
       const text = await navigator.clipboard.readText();
       if (text) {
+        const format = detectConfigFormatFromContent(text);
+        setConfigFormat(format);
         setJsonText(text);
-        handleParseString(text, '剪贴板配置规范', '从剪贴板粘贴的原始配置解析而来');
+        handleParseString(text, '剪贴板配置规范', '从剪贴板粘贴的原始配置解析而来', format);
       }
     } catch {
       setParseError('无法访问剪贴板，请使用 Ctrl+V / Cmd+V 直接粘贴');
     }
   };
 
-  const handleFormatJson = () => {
+  const handleFormatConfig = () => {
     if (!jsonText.trim()) return;
+    const format = detectConfigFormatFromContent(jsonText, configFormat);
     try {
-      const parsed = JSON.parse(jsonText);
-      setJsonText(JSON.stringify(parsed, null, 2));
+      const parsed = parseConfigText(jsonText, format);
+      setJsonText(stringifyConfig(parsed, format));
+      setConfigFormat(format);
       setParseError(null);
     } catch (err: any) {
-      setParseError(`无法格式化，JSON 语法有误: ${err.message}`);
+      setParseError(`无法格式化，${format.toUpperCase()} 语法有误: ${err.message}`);
     }
   };
 
   const handleApplyPreset = (snippet: typeof PRESET_RAW_CONFIGS[0]) => {
     const formatted = JSON.stringify(snippet.json, null, 2);
+    setConfigFormat('json');
     setJsonText(formatted);
     setSchemaName(snippet.name.split(' (')[0] + ' 约束规范');
     setSchemaDesc(snippet.desc);
     handleParseString(
       formatted,
       snippet.name.split(' (')[0] + ' 约束规范',
-      snippet.desc
+      snippet.desc,
+      'json'
     );
   };
 
@@ -282,12 +300,12 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         const timer = setTimeout(() => controller.abort(), 8000);
         const res = await fetch(url, {
           signal: controller.signal,
-          headers: { Accept: 'application/json, text/plain, */*' },
+          headers: { Accept: 'application/json, application/yaml, text/plain, */*' },
         });
         clearTimeout(timer);
         if (res.ok) {
           const text = await res.text();
-          data = JSON.parse(text);
+          data = parseConfigText(text, detectConfigFormat(url));
         } else {
           throw new Error(`HTTP ${res.status} ${res.statusText}`);
         }
@@ -299,19 +317,21 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         clearTimeout(proxyTimer);
         if (proxyRes.ok) {
           const proxyText = await proxyRes.text();
-          data = JSON.parse(proxyText);
+          data = parseConfigText(proxyText, detectConfigFormat(url));
         } else {
           throw directErr;
         }
       }
 
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-        throw new Error('远程返回的数据不是标准的 JSON Object 键值对对象');
+        throw new Error('远程返回的数据不是标准的键值对配置对象');
       }
 
-      const formatted = JSON.stringify(data, null, 2);
+      const format = detectConfigFormat(url);
+      setConfigFormat(format);
+      const formatted = stringifyConfig(data, format);
       setJsonText(formatted);
-      const urlFileName = url.split('/').pop()?.replace(/\.json$/i, '') || '远程原始配置';
+      const urlFileName = url.split('/').pop()?.replace(/\.(json|ya?ml|properties|env)$/i, '') || '远程原始配置';
       const autoName = `${urlFileName.charAt(0).toUpperCase() + urlFileName.slice(1)} 约束规范`;
       const autoDesc = `从远程原始配置抓取: ${url}`;
 
@@ -321,7 +341,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       setParseError(null);
     } catch (err: any) {
       setFetchError(
-        `拉取失败: ${err.message || '网络连接超时或跨域被阻止 (CORS)'}。您可以将 JSON 直接复制到「直接粘贴」标签中。`
+        `拉取失败: ${err.message || '网络连接超时或跨域被阻止 (CORS)'}。您可以将配置内容直接复制到「直接粘贴」标签中。`
       );
     } finally {
       setIsFetchingRemote(false);
@@ -356,10 +376,10 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           <div className="min-w-0">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <FileCode className="w-5 h-5 text-indigo-400 shrink-0" />
-              <span>提供原始全配置 JSON · 自动构建规则模型</span>
+              <span>提供原始全配置 · 自动构建规则模型</span>
             </h2>
             <p className="text-xs text-slate-400 mt-0.5 truncate">
-              开发端：提供生产或开发环境的原始全量业务 JSON，系统将自动逆向分析层级路径与对象数组，进入工作台定制字段规则与安全边界
+              开发端：提供生产或开发环境的原始全量业务配置，系统将自动逆向分析层级路径与对象数组，进入工作台定制字段规则与安全边界
             </p>
           </div>
           <button
@@ -382,7 +402,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               }`}
             >
               <FileCode className="w-4 h-4 text-indigo-400" />
-              <span>直接粘贴原始配置 (JSON)</span>
+              <span>直接粘贴原始配置</span>
             </button>
 
             <button
@@ -394,7 +414,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               }`}
             >
               <Upload className="w-4 h-4 text-indigo-400" />
-              <span>本地上传原始 .json 文件</span>
+              <span>本地上传配置文件</span>
             </button>
 
             <button
@@ -439,9 +459,12 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
 
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-300 font-medium">
-                  粘贴业务系统原始全量 JSON 内容：
+                  粘贴业务系统原始配置内容：
                 </span>
                 <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-400" aria-live="polite">
+                    {jsonText.trim() ? `已识别：${configFormat.toUpperCase()}` : '自动识别配置格式'}
+                  </span>
                   <button
                     type="button"
                     onClick={handlePasteFromClipboard}
@@ -452,7 +475,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={handleFormatJson}
+                    onClick={handleFormatConfig}
                     className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-1"
                   >
                     <FileCode className="w-3 h-3" />
@@ -466,7 +489,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                 value={jsonText}
                 onChange={(e) => handlePasteChange(e.target.value)}
                 className="w-full p-3.5 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
-                placeholder='{\n  "serviceName": "api-gateway",\n  "port": 8080,\n  "db": { ... }\n}'
+                placeholder={configFormat === 'yaml' ? 'serviceName: api-gateway\nport: 8080' : configFormat === 'properties' ? 'serviceName=api-gateway\nserver.port=8080' : configFormat === 'env' ? 'SERVICE_NAME=api-gateway\nSERVER__PORT=8080' : '{\n  "serviceName": "api-gateway",\n  "port": 8080\n}'}
                 spellCheck={false}
               />
             </div>
@@ -478,7 +501,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               <input
                 type="file"
                 ref={fileInputRef}
-                accept=".json,application/json"
+                accept=".json,.yaml,.yml,.properties,.env,application/json,text/yaml,text/plain"
                 className="hidden"
                 onChange={handleFileChange}
               />
@@ -498,7 +521,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                   <Upload className="w-7 h-7" />
                 </div>
                 <h3 className="text-sm font-semibold text-white">
-                  点击浏览本地文件 或 将业务原始 .json 文件拖入此处
+                  点击浏览本地 JSON、YAML、Properties 或 ENV 配置文件
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
                   系统将以此文件作为初始基准配置，逆向推导所有字段路径并建立字段规则
@@ -519,7 +542,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
             <div className="space-y-4">
               <div>
                 <label className="text-xs font-medium text-slate-300 block mb-1.5">
-                  输入远程原始 JSON 配置文件公开链接：
+                  输入远程原始配置文件公开链接（按扩展名识别格式）：
                 </label>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <div className="relative flex-1">
@@ -528,7 +551,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                       type="url"
                       value={remoteUrl}
                       onChange={(e) => setRemoteUrl(e.target.value)}
-                      placeholder="https://raw.githubusercontent.com/.../config.json"
+                      placeholder="https://raw.githubusercontent.com/.../config.yml"
                       className="w-full pl-10 pr-4 py-2.5 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-white focus:outline-hidden focus:border-indigo-500"
                     />
                   </div>

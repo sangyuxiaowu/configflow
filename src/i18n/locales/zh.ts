@@ -199,7 +199,7 @@ export const zhLocale: TranslationDictionary = {
     title: '开发规则设计端',
     subtitle: '架构师与研发在此定义配置字段的安全边界、说明文档、多套参考基线与防呆规则',
     createBlankSchema: '新建空白规范',
-    importJson: '导入普通 JSON 生成',
+    importJson: '导入配置并生成规范',
     exportPackage: '导出规范交付包',
     referenceProfiles: '管理参考基线 ({count})',
     previewOpsWorkbench: '进入运维端预览',
