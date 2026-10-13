@@ -15,6 +15,8 @@ import {
 import { inferSchemaFromJson } from '../../utils/schemaInfer';
 import { ConfigFormat, detectConfigFormat, detectConfigFormatFromContent, parseConfigText, stringifyConfig } from '../../utils/configFormats';
 import { FieldDefinition, ConfigCategory } from '../../types/config';
+import { fetchRemoteResource } from '../../utils/remoteConfig';
+import { PRESET_RAW_CONFIGS } from '../../data/rawConfigPresets';
 
 interface JsonImportModalProps {
   isOpen: boolean;
@@ -27,94 +29,6 @@ interface JsonImportModalProps {
     description: string;
   }) => void;
 }
-
-// 开发端专属：供解析生成规则的原始业务配置 JSON 样例
-const PRESET_RAW_CONFIGS = [
-  {
-    name: '分布式集群与工作流引擎 (Cluster & Worker 列表)',
-    desc: '包含集群心跳、重试次数与多计算节点对象列表的原始配置',
-    json: {
-      Cluster: {
-        ClusterName: 'prod-cloud-cluster',
-        HeartbeatIntervalSeconds: 15,
-        MaxFailoverRetries: 3,
-        Nodes: [
-          {
-            NodeName: '计算任务主节点-01',
-            Host: '192.168.10.21',
-            Port: 8081,
-            Role: 'Master',
-            ConcurrencyLimit: 32,
-            EnableAutoScaling: true,
-            AssignedQueues: ['high-priority', 'batch-jobs'],
-          },
-          {
-            NodeName: '数据流聚合节点-02',
-            Host: '192.168.10.22',
-            Port: 8082,
-            Role: 'Worker',
-            ConcurrencyLimit: 16,
-            EnableAutoScaling: true,
-            AssignedQueues: ['stream-telemetry'],
-          },
-          {
-            NodeName: '辅助调度节点-03',
-            Host: '192.168.10.23',
-            Port: 8083,
-            Role: 'Standby',
-            ConcurrencyLimit: 8,
-            EnableAutoScaling: false,
-            AssignedQueues: ['audit-logs'],
-          },
-        ],
-      },
-    },
-  },
-  {
-    name: '云原生 API 网关与服务治理 (Gateway & DB Pool)',
-    desc: '包含端口、TLS开关、跨域白名单与数据库连接池的原始配置',
-    json: {
-      gateway: {
-        listenPort: 8080,
-        bindHost: '0.0.0.0',
-        requestTimeoutMs: 5000,
-        enableTls: true,
-        corsOrigins: ['https://console.company.org', 'https://app.company.org'],
-        rateLimitQps: 500,
-      },
-      datasource: {
-        dbHost: '10.0.8.50',
-        dbPort: 3306,
-        maxPoolSize: 50,
-        idleTimeoutSeconds: 60,
-        authPassword: 'ENC(db_secure_pass_99)',
-      },
-      observability: {
-        logLevel: 'info',
-        logFormat: 'json',
-        enableMetricsExport: true,
-      },
-    },
-  },
-  {
-    name: '消息发布订阅与流处理中心 (Message Bus & Topics)',
-    desc: '包含 Kafka 端点、会话超时、批处理与死信队列的原始配置',
-    json: {
-      broker: {
-        clusterEndpoint: 'kafka-cluster.internal:9092',
-        clientGroupId: 'analytics-consumer-group',
-        sessionTimeoutMs: 30000,
-        enableAutoCommit: false,
-      },
-      pipelines: {
-        batchSize: 200,
-        flushIntervalMs: 500,
-        deadLetterTopic: 'dlq.failed.events',
-        subscribers: ['orders.created', 'payments.success', 'inventory.deducted'],
-      },
-    },
-  },
-];
 
 export const JsonImportModal: React.FC<JsonImportModalProps> = ({
   isOpen,
@@ -294,40 +208,18 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
     setFetchError(null);
 
     try {
-      let data: any = null;
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(url, {
-          signal: controller.signal,
-          headers: { Accept: 'application/json, application/yaml, text/plain, */*' },
-        });
-        clearTimeout(timer);
-        if (res.ok) {
-          const text = await res.text();
-          data = parseConfigText(text, detectConfigFormat(url));
-        } else {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-      } catch (directErr: any) {
-        const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-        const proxyController = new AbortController();
-        const proxyTimer = setTimeout(() => proxyController.abort(), 8000);
-        const proxyRes = await fetch(proxyUrl, { signal: proxyController.signal });
-        clearTimeout(proxyTimer);
-        if (proxyRes.ok) {
-          const proxyText = await proxyRes.text();
-          data = parseConfigText(proxyText, detectConfigFormat(url));
-        } else {
-          throw directErr;
-        }
-      }
+      const format = detectConfigFormat(url);
+      const data = await fetchRemoteResource(
+        url,
+        (text) => parseConfigText(text, format),
+        8000,
+        { Accept: 'application/json, application/yaml, text/plain, */*' }
+      );
 
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
         throw new Error('远程返回的数据不是标准的键值对配置对象');
       }
 
-      const format = detectConfigFormat(url);
       setConfigFormat(format);
       const formatted = stringifyConfig(data, format);
       setJsonText(formatted);

@@ -1,28 +1,19 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Upload,
   BookOpen,
   Download,
-  Search,
-  Filter,
   CheckCircle2,
   AlertTriangle,
-  RotateCcw,
   Sparkles,
-  Layers,
-  ShieldCheck,
   ChevronRight,
   FileText,
-  Sliders,
-  Check,
-  Flame,
   Wrench,
   Code2,
   User,
   Calendar,
   Tag,
   Globe,
-  ExternalLink,
 } from 'lucide-react';
 import {
   ConfigSchemaPackage,
@@ -30,7 +21,7 @@ import {
   ValidationError,
   ReferenceExample,
 } from '../../types/config';
-import { OpsFieldRenderer } from './OpsFieldRenderer';
+import { OpsFieldsWorkspace } from './OpsFieldsWorkspace';
 import { OpsReferenceDrawer } from './OpsReferenceDrawer';
 import { OpsExportModal } from './OpsExportModal';
 import { LoadCurrentConfigModal } from './LoadCurrentConfigModal';
@@ -39,7 +30,6 @@ import { validateConfigAgainstSchema } from '../../utils/validator';
 import {
   getValueByPath,
   setValueByPath,
-  inferSchemaFromJson,
 } from '../../utils/schemaInfer';
 import { useToast } from '../common/Toast';
 import { useI18n } from '../../i18n';
@@ -197,73 +187,11 @@ export const OpsVisualEditor: React.FC<OpsVisualEditorProps> = ({
     );
   };
 
-  // Helper to get all errors belonging to a specific field
-  const getErrorsForField = (field: FieldDefinition): ValidationError[] => {
-    return errors.filter(
-      (e) => e.path === field.path || e.path.startsWith(`${field.path}[`) || e.path.startsWith(`${field.path}.`)
-    );
-  };
-
-  // Categories list
-  const categories = Array.from(
-    new Set(schemaPackage.fields.map((f) => f.category))
-  );
-
-  // Error count per category
-  const categoryErrorCounts: Record<string, number> = {};
-  for (const cat of categories) {
-    categoryErrorCounts[cat] = 0;
-  }
-  for (const err of errors) {
-    const field = getFieldForError(err.path);
-    if (field && categoryErrorCounts[field.category] !== undefined) {
-      categoryErrorCounts[field.category]++;
-    }
-  }
-
   // Handle single field change
   const handleFieldChange = (path: string, newVal: any) => {
     const nextConfig = setValueByPath(currentConfig, path, newVal);
     onUpdateConfig(nextConfig);
   };
-
-  // Filter fields
-  const filteredFields = schemaPackage.fields.filter((field) => {
-    if (activeCategory !== 'all' && field.category !== activeCategory) {
-      return false;
-    }
-
-    const q = searchQuery.toLowerCase();
-    if (
-      q &&
-      !field.label.toLowerCase().includes(q) &&
-      !field.path.toLowerCase().includes(q) &&
-      !field.description.toLowerCase().includes(q)
-    ) {
-      return false;
-    }
-
-    if (filterMode === 'errors') {
-      return getErrorsForField(field).length > 0;
-    }
-    if (filterMode === 'dangerous') {
-      return Boolean(field.isDangerous);
-    }
-    if (filterMode === 'modified') {
-      const curVal = getValueByPath(currentConfig, field.path);
-      if (uploadedOriginalConfig) {
-        const origVal = getValueByPath(uploadedOriginalConfig, field.path);
-        return JSON.stringify(curVal) !== JSON.stringify(origVal);
-      } else if (activeReference?.config) {
-        const baseVal = getValueByPath(activeReference.config, field.path);
-        return JSON.stringify(curVal) !== JSON.stringify(baseVal);
-      }
-      const initVal = getValueByPath(initialConfig, field.path);
-      return JSON.stringify(curVal) !== JSON.stringify(initVal);
-    }
-
-    return true;
-  });
 
   // Jump to first error
   const handleJumpToFirstError = () => {
@@ -474,204 +402,21 @@ export const OpsVisualEditor: React.FC<OpsVisualEditorProps> = ({
         </div>
       </div>
 
-      {/* Main 2-column Layout: Category Sidebar + Visual Field Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Category Sidebar */}
-        <div className="lg:col-span-3 space-y-2">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 block">
-              {t.dev.categoriesTitle}
-            </span>
-
-            <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => setActiveCategory('all')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left ${
-                  activeCategory === 'all'
-                    ? 'bg-indigo-600 text-white font-semibold shadow-xs'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>{t.ops.allCategories}</span>
-                </div>
-                <span className="tabular-nums text-[11px] opacity-75">
-                  {schemaPackage.fields.length}
-                </span>
-              </button>
-
-              {categories.map((cat) => {
-                const isSelected = activeCategory === cat;
-                const fieldCount = schemaPackage.fields.filter(
-                  (f) => f.category === cat
-                ).length;
-                const errCount = categoryErrorCounts[cat] || 0;
-
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setActiveCategory(cat)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white font-semibold shadow-xs'
-                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                    }`}
-                  >
-                    <span className="truncate">{cat}</span>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {errCount > 0 && (
-                        <span className="w-2 h-2 rounded-full bg-rose-500 ring-2 ring-rose-950" />
-                      )}
-                      <span className="tabular-nums text-[11px] opacity-75">
-                        {fieldCount}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Quick tips for Ops */}
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 text-xs text-slate-400 space-y-2">
-            <div className="flex items-center gap-1.5 text-indigo-300 font-semibold">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{language === 'en' ? 'Ops Safety Guardrails' : '运维防呆保护机制'}</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-slate-400">
-              {language === 'en' ? (
-                <>
-                  • Port and numeric boundaries strictly enforced
-                  <br />
-                  • Passwords & tokens automatically masked
-                  <br />
-                  • Cluster nodes support card expand, clone & reorder
-                  <br />
-                  • Instant access to developer architectural baselines
-                </>
-              ) : (
-                <>
-                  • 端口与数值均在开发设定的安全边界内
-                  <br />
-                  • 密码与凭据自动脱敏显示
-                  <br />
-                  • 对象列表可卡片化展开、克隆与排序
-                  <br />
-                  • 随时可查阅开发架构考量并一键采纳
-                </>
-              )}
-            </p>
-          </div>
-        </div>
-
-        {/* Right Content Area: Filter Toolbar + Field Cards */}
-        <div className="lg:col-span-9 space-y-4">
-          {/* Filter & Search Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t.ops.searchPlaceholder}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-hidden focus:border-indigo-500"
-              />
-            </div>
-
-            {/* Filter segmented buttons */}
-            <div className="flex items-center gap-1 bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
-              <button
-                type="button"
-                onClick={() => setFilterMode('all')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  filterMode === 'all'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {t.ops.filterAll}
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterMode('modified')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  filterMode === 'modified'
-                    ? 'bg-indigo-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {t.ops.filterModified} ({changedCount})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterMode('dangerous')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  filterMode === 'dangerous'
-                    ? 'bg-rose-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {t.ops.filterDangerous}
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterMode('errors')}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                  filterMode === 'errors'
-                    ? 'bg-rose-600 text-white'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-              >
-                {t.ops.filterErrors} ({errors.length})
-              </button>
-            </div>
-          </div>
-
-          {/* Cards List */}
-          <div className="space-y-3.5">
-            {filteredFields.map((field) => {
-              const curValue = getValueByPath(currentConfig, field.path);
-              const fieldErrors = getErrorsForField(field);
-              const err = fieldErrors[0];
-              const refVal = activeReference
-                ? getValueByPath(activeReference.config, field.path)
-                : undefined;
-
-              return (
-                <OpsFieldRenderer
-                  key={field.id}
-                  field={field}
-                  value={curValue}
-                  onChange={(val) => handleFieldChange(field.path, val)}
-                  error={err}
-                  allErrors={fieldErrors}
-                  referenceValue={refVal}
-                  referenceName={activeReference?.name}
-                />
-              );
-            })}
-
-            {filteredFields.length === 0 && (
-              <div className="py-16 text-center bg-slate-900/40 rounded-2xl border border-slate-800">
-                <p className="text-sm text-slate-400">{t.ops.noMatchFields}</p>
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setFilterMode('all');
-                  }}
-                  className="mt-2 text-xs text-indigo-400 hover:underline"
-                >
-                  {t.ops.resetFilter}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      <OpsFieldsWorkspace
+        fields={schemaPackage.fields}
+        currentConfig={currentConfig}
+        initialConfig={initialConfig}
+        uploadedOriginalConfig={uploadedOriginalConfig}
+        activeReference={activeReference}
+        errors={errors}
+        activeCategory={activeCategory}
+        searchQuery={searchQuery}
+        filterMode={filterMode}
+        onActiveCategoryChange={setActiveCategory}
+        onSearchQueryChange={setSearchQuery}
+        onFilterModeChange={setFilterMode}
+        onChangeConfig={handleFieldChange}
+      />
 
       {/* Reference Examples Drawer */}
       <OpsReferenceDrawer

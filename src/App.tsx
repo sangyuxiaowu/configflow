@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
 import {
   Code2,
   Wrench,
@@ -11,14 +11,34 @@ import {
 } from 'lucide-react';
 import { ConfigSchemaPackage } from './types/config';
 import { getShowcaseSchemaPackage } from './data/mockTemplates';
-import { DevSchemaDesigner } from './components/dev/DevSchemaDesigner';
-import { OpsVisualEditor } from './components/ops/OpsVisualEditor';
 import { ToastProvider, useToast } from './components/common/Toast';
 import { inferSchemaFromJson, resolveSchemaPackageFromJson } from './utils/schemaInfer';
+import { fetchRemoteJson } from './utils/remoteConfig';
 import { ConfigLoadModal, ConfigLoadResult } from './components/common/ConfigLoadModal';
 import { PWAInstallButton } from './components/pwa/PWAInstallButton';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { I18nProvider, useI18n, LanguageSwitcher } from './i18n';
+
+const DevSchemaDesigner = lazy(() =>
+  import('./components/dev/DevSchemaDesigner').then((module) => ({
+    default: module.DevSchemaDesigner,
+  }))
+);
+const OpsVisualEditor = lazy(() =>
+  import('./components/ops/OpsVisualEditor').then((module) => ({
+    default: module.OpsVisualEditor,
+  }))
+);
+
+const WorkspaceLoading = () => (
+  <div
+    role="status"
+    aria-label="Loading workspace"
+    className="min-h-[30vh] flex items-center justify-center text-slate-400"
+  >
+    <RefreshCw className="w-5 h-5 animate-spin" />
+  </div>
+);
 
 /**
  * 提取 URL query 中的远程加载参数 (?load=https://xxx.json)
@@ -81,43 +101,7 @@ export function AppContent() {
     setRemoteLoadError(null);
 
     try {
-      let data: any = null;
-
-      // 尝试 1：直接 fetch
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 9000);
-        const res = await fetch(targetUrl, {
-          signal: controller.signal,
-          headers: { Accept: 'application/json, text/plain, */*' },
-        });
-        clearTimeout(timer);
-
-        if (res.ok) {
-          const text = await res.text();
-          data = JSON.parse(text);
-        } else {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-      } catch (directErr: any) {
-        // 尝试 2：跨域代理中继 fallback
-        try {
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-          const proxyController = new AbortController();
-          const proxyTimer = setTimeout(() => proxyController.abort(), 9000);
-          const proxyRes = await fetch(proxyUrl, { signal: proxyController.signal });
-          clearTimeout(proxyTimer);
-
-          if (proxyRes.ok) {
-            const proxyText = await proxyRes.text();
-            data = JSON.parse(proxyText);
-          } else {
-            throw new Error(t.remote.proxyFailed);
-          }
-        } catch {
-          throw directErr;
-        }
-      }
+      const data = await fetchRemoteJson(targetUrl);
 
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
         throw new Error(t.remote.notStandardJsonObject);
@@ -316,19 +300,21 @@ export function AppContent() {
           </div>
         </header>
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <OpsVisualEditor
-            schemaPackage={schemaPackage}
-            currentConfig={currentOpsConfig}
-            onUpdateConfig={setCurrentOpsConfig}
-            onUpdateSchemaPackage={(pkg) => {
-              setSchemaPackage(pkg);
-              setCurrentOpsConfig(JSON.parse(JSON.stringify(pkg.defaultConfig || {})));
-            }}
-            onSwitchToDevMode={() => setActiveMode('dev')}
-            onLoadShowcaseDemo={handleLoadShowcaseDemo}
-            isRemoteMode={true}
-            remoteUrl={remoteUrl || undefined}
-          />
+          <Suspense fallback={<WorkspaceLoading />}>
+            <OpsVisualEditor
+              schemaPackage={schemaPackage}
+              currentConfig={currentOpsConfig}
+              onUpdateConfig={setCurrentOpsConfig}
+              onUpdateSchemaPackage={(pkg) => {
+                setSchemaPackage(pkg);
+                setCurrentOpsConfig(JSON.parse(JSON.stringify(pkg.defaultConfig || {})));
+              }}
+              onSwitchToDevMode={() => setActiveMode('dev')}
+              onLoadShowcaseDemo={handleLoadShowcaseDemo}
+              isRemoteMode={true}
+              remoteUrl={remoteUrl || undefined}
+            />
+          </Suspense>
         </main>
         <OfflineIndicator />
       </div>
@@ -420,30 +406,32 @@ export function AppContent() {
 
       {/* Main Viewport Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeMode === 'dev' ? (
-          <DevSchemaDesigner
-            schemaPackage={schemaPackage}
-            onUpdateSchemaPackage={(pkg) => {
-              setSchemaPackage(pkg);
-              setCurrentOpsConfig(JSON.parse(JSON.stringify(pkg.defaultConfig || {})));
-            }}
-            onSwitchToOpsMode={() => setActiveMode('ops')}
-            onLoadShowcaseDemo={handleLoadShowcaseDemo}
-          />
-        ) : (
-          <OpsVisualEditor
-            schemaPackage={schemaPackage}
-            currentConfig={currentOpsConfig}
-            onUpdateConfig={setCurrentOpsConfig}
-            onUpdateSchemaPackage={(pkg) => {
-              setSchemaPackage(pkg);
-              setCurrentOpsConfig(JSON.parse(JSON.stringify(pkg.defaultConfig || {})));
-            }}
-            onSwitchToDevMode={() => setActiveMode('dev')}
-            onLoadShowcaseDemo={handleLoadShowcaseDemo}
-            isRemoteMode={false}
-          />
-        )}
+        <Suspense fallback={<WorkspaceLoading />}>
+          {activeMode === 'dev' ? (
+            <DevSchemaDesigner
+              schemaPackage={schemaPackage}
+              onUpdateSchemaPackage={(pkg) => {
+                setSchemaPackage(pkg);
+                setCurrentOpsConfig(JSON.parse(JSON.stringify(pkg.defaultConfig || {})));
+              }}
+              onSwitchToOpsMode={() => setActiveMode('ops')}
+              onLoadShowcaseDemo={handleLoadShowcaseDemo}
+            />
+          ) : (
+            <OpsVisualEditor
+              schemaPackage={schemaPackage}
+              currentConfig={currentOpsConfig}
+              onUpdateConfig={setCurrentOpsConfig}
+              onUpdateSchemaPackage={(pkg) => {
+                setSchemaPackage(pkg);
+                setCurrentOpsConfig(JSON.parse(JSON.stringify(pkg.defaultConfig || {})));
+              }}
+              onSwitchToDevMode={() => setActiveMode('dev')}
+              onLoadShowcaseDemo={handleLoadShowcaseDemo}
+              isRemoteMode={false}
+            />
+          )}
+        </Suspense>
       </main>
 
       {/* Footer */}

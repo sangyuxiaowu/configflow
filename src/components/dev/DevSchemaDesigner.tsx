@@ -1,25 +1,12 @@
 import React, { useState } from 'react';
 import {
   Upload,
-  Plus,
   BookOpen,
   Download,
-  Search,
-  Filter,
-  SlidersHorizontal,
-  ShieldAlert,
-  Clock,
-  Lock,
-  Edit3,
-  Trash2,
   Sparkles,
-  Layers,
-  CheckCircle2,
-  AlertTriangle,
   Eye,
   FileCode,
   Tag,
-  ArrowRight,
   FolderPlus,
   Edit2,
   X,
@@ -37,6 +24,8 @@ import { JsonImportModal } from './JsonImportModal';
 import { FieldRuleEditor } from './FieldRuleEditor';
 import { ReferenceExamplesEditor } from './ReferenceExamplesEditor';
 import { SchemaExportModal } from './SchemaExportModal';
+import { EditSchemaInfoModal } from './EditSchemaInfoModal';
+import { SchemaFieldsWorkspace } from './SchemaFieldsWorkspace';
 import { useToast } from '../common/Toast';
 import { useI18n } from '../../i18n';
 
@@ -294,20 +283,6 @@ export const DevSchemaDesigner: React.FC<DevSchemaDesignerProps> = ({
     );
   }
 
-  // Filter fields
-  const filteredFields = schemaPackage.fields.filter((field) => {
-    const matchesCategory =
-      selectedCategory === 'all' || field.category === selectedCategory;
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      !q ||
-      field.label.toLowerCase().includes(q) ||
-      field.path.toLowerCase().includes(q) ||
-      field.key.toLowerCase().includes(q) ||
-      field.description.toLowerCase().includes(q);
-    return matchesCategory && matchesSearch;
-  });
-
   const categories = Array.from(
     new Set(schemaPackage.fields.map((f) => f.category))
   );
@@ -533,276 +508,46 @@ export const DevSchemaDesigner: React.FC<DevSchemaDesignerProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Category sidebar + fields list */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Sidebar */}
-        <div className="lg:col-span-3 space-y-2">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-3 shadow-xs">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2 block">
-              {t.dev.categoriesTitle}
-            </span>
+      <SchemaFieldsWorkspace
+        fields={schemaPackage.fields}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        searchQuery={searchQuery}
+        onSelectCategory={setSelectedCategory}
+        onSearchQueryChange={setSearchQuery}
+        onAddField={handleAddNewField}
+        onEditField={setEditingField}
+        onDeleteField={handleDeleteField}
+      />
 
-            <div className="space-y-1">
-              <button
-                type="button"
-                onClick={() => setSelectedCategory('all')}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left ${
-                  selectedCategory === 'all'
-                    ? 'bg-indigo-600 text-white font-semibold shadow-xs'
-                    : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-2">
-                  <Layers className="w-3.5 h-3.5" />
-                  <span>{t.dev.allFields}</span>
-                </div>
-                <span className="tabular-nums text-[11px] opacity-75">
-                  {schemaPackage.fields.length}
-                </span>
-              </button>
-
-              {categories.map((cat) => {
-                const isSelected = selectedCategory === cat;
-                const fieldCount = schemaPackage.fields.filter(
-                  (f) => f.category === cat
-                ).length;
-
-                return (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left ${
-                      isSelected
-                        ? 'bg-indigo-600 text-white font-semibold shadow-xs'
-                        : 'text-slate-300 hover:bg-slate-800/80 hover:text-white'
-                    }`}
-                  >
-                    <span className="truncate">{cat}</span>
-                    <span className="tabular-nums text-[11px] opacity-75">
-                      {fieldCount}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Right Fields List */}
-        <div className="lg:col-span-9 space-y-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t.dev.searchFieldPlaceholder}
-                className="w-full pl-9 pr-4 py-2 text-xs bg-slate-900 border border-slate-800 rounded-xl text-white placeholder-slate-500 focus:outline-hidden focus:border-indigo-500"
-              />
-            </div>
-
-            <button
-              onClick={handleAddNewField}
-              className="px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-sm shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{t.dev.addFieldBtn}</span>
-            </button>
-          </div>
-
-          {/* Cards List */}
-          <div className="space-y-3">
-            {filteredFields.map((field) => (
-              <div
-                key={field.id}
-                className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-4.5 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-semibold text-sm text-white">
-                      {field.label}
-                    </span>
-                    <span className="text-[11px] font-mono text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/60">
-                      {field.path}
-                    </span>
-                    <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
-                      {field.type}
-                    </span>
-                    {field.required && (
-                      <span className="text-[10px] text-rose-400 font-semibold bg-rose-950/60 px-1.5 py-0.5 rounded border border-rose-800/50">
-                        {t.common.required}
-                      </span>
-                    )}
-                    {field.isDangerous && (
-                      <span className="text-[10px] text-amber-400 font-semibold bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/50">
-                        {t.ops.filterDangerous}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-xs text-slate-400 leading-relaxed line-clamp-1">
-                    {field.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => setEditingField(field)}
-                    className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1 transition-colors"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>{t.common.edit}</span>
-                  </button>
-
-                  <button
-                    onClick={() => handleDeleteField(field.id, field.label)}
-                    className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors"
-                    title={t.common.delete}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {filteredFields.length === 0 && (
-              <div className="py-16 text-center bg-slate-900/40 rounded-2xl border border-slate-800 space-y-2">
-                <p className="text-sm text-slate-300 font-semibold">
-                  {t.dev.emptyFieldsTitle}
-                </p>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  {t.dev.emptyFieldsDesc}
-                </p>
-                <button
-                  onClick={handleAddNewField}
-                  className="mt-3 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm transition-all"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>{t.dev.addFieldBtn}</span>
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Modal: Edit Schema Info */}
       {isEditSchemaInfoOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in">
-          <div className="relative w-full max-w-md bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h3 className="text-sm font-semibold text-white">
-                {t.dev.editBasicInfo}
-              </h3>
-              <button
-                onClick={() => setIsEditSchemaInfoOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
-                  {t.dev.schemaName}
-                </label>
-                <input
-                  type="text"
-                  value={newSchemaName}
-                  onChange={(e) => setNewSchemaName(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
-                  {t.dev.schemaVersion}
-                </label>
-                <input
-                  type="text"
-                  value={newSchemaVersion}
-                  onChange={(e) => setNewSchemaVersion(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white font-mono"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
-                  {language === 'en' ? 'Configuration output format' : '配置产出格式'}
-                </label>
-                <select
-                  value={schemaPackage.outputFormat || 'json'}
-                  onChange={(e) =>
-                    onUpdateSchemaPackage({
-                      ...schemaPackage,
-                      outputFormat: e.target.value as ConfigSchemaPackage['outputFormat'],
-                    })
-                  }
-                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white"
-                >
-                  <option value="json">JSON</option>
-                  <option value="yaml">YAML (.yml)</option>
-                  <option value="properties">Properties</option>
-                  <option value="env">ENV</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
-                  {t.dev.schemaAuthor}
-                </label>
-                <input
-                  type="text"
-                  value={newSchemaAuthor}
-                  onChange={(e) => setNewSchemaAuthor(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white"
-                />
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
-                  {t.dev.schemaDesc}
-                </label>
-                <textarea
-                  rows={3}
-                  value={newSchemaDesc}
-                  onChange={(e) => setNewSchemaDesc(e.target.value)}
-                  className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-slate-200 resize-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setIsEditSchemaInfoOpen(false)}
-                className="px-3 py-1.5 text-xs font-medium text-slate-300 bg-slate-800 rounded-lg"
-              >
-                {t.common.cancel}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  onUpdateSchemaPackage({
-                    ...schemaPackage,
-                    name: newSchemaName.trim() || schemaPackage.name,
-                    version: newSchemaVersion.trim() || schemaPackage.version,
-                    description: newSchemaDesc.trim() || schemaPackage.description,
-                    author: newSchemaAuthor.trim() || schemaPackage.author || 'Architecture Team',
-                    updatedAt: new Date().toISOString().split('T')[0],
-                  });
-                  setIsEditSchemaInfoOpen(false);
-                  showToast(language === 'en' ? 'Updated schema info' : '已更新规范信息', 'success');
-                }}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 rounded-lg"
-              >
-                {t.common.save}
-              </button>
-            </div>
-          </div>
-        </div>
+        <EditSchemaInfoModal
+          schemaPackage={schemaPackage}
+          name={newSchemaName}
+          version={newSchemaVersion}
+          description={newSchemaDesc}
+          author={newSchemaAuthor}
+          onNameChange={setNewSchemaName}
+          onVersionChange={setNewSchemaVersion}
+          onDescriptionChange={setNewSchemaDesc}
+          onAuthorChange={setNewSchemaAuthor}
+          onOutputFormatChange={(outputFormat) =>
+            onUpdateSchemaPackage({ ...schemaPackage, outputFormat })
+          }
+          onClose={() => setIsEditSchemaInfoOpen(false)}
+          onSave={() => {
+            onUpdateSchemaPackage({
+              ...schemaPackage,
+              name: newSchemaName.trim() || schemaPackage.name,
+              version: newSchemaVersion.trim() || schemaPackage.version,
+              description: newSchemaDesc.trim() || schemaPackage.description,
+              author: newSchemaAuthor.trim() || schemaPackage.author || 'Architecture Team',
+              updatedAt: new Date().toISOString().split('T')[0],
+            });
+            setIsEditSchemaInfoOpen(false);
+            showToast(language === 'en' ? 'Updated schema info' : '已更新规范信息', 'success');
+          }}
+        />
       )}
 
       {/* Modals */}

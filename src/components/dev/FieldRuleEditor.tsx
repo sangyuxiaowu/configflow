@@ -20,7 +20,10 @@ import {
   Settings2,
   Check,
 } from 'lucide-react';
-import { FieldDefinition, FieldType, EnumOption } from '../../types/config';
+import { FieldDefinition, FieldType } from '../../types/config';
+import { useArrayObjectFieldEditor } from './useArrayObjectFieldEditor';
+import { EnumOptionsEditor } from './EnumOptionsEditor';
+import { ScalarConstraintsEditor } from './ScalarConstraintsEditor';
 
 interface FieldRuleEditorProps {
   field: FieldDefinition;
@@ -57,27 +60,32 @@ export const FieldRuleEditor: React.FC<FieldRuleEditorProps> = ({
   const [isNewCategoryMode, setIsNewCategoryMode] = useState(false);
   const [customCategoryInput, setCustomCategoryInput] = useState('');
 
-  // Top-level Enum option inputs
-  const [newOptionValue, setNewOptionValue] = useState('');
-  const [newOptionLabel, setNewOptionLabel] = useState('');
-  const [newOptionDesc, setNewOptionDesc] = useState('');
-  const [batchEnumText, setBatchEnumText] = useState('');
-  const [showBatchEnum, setShowBatchEnum] = useState(false);
-
-  // Subfield inputs inside array_object
-  const [newSubKey, setNewSubKey] = useState('');
-  const [newSubLabel, setNewSubLabel] = useState('');
-  const [newSubType, setNewSubType] = useState<FieldType>('string');
-
-  // Active expanded subfield index for deep editing
-  const [expandedSubIndex, setExpandedSubIndex] = useState<number | null>(0);
-
-  // Subfield enum input states
-  const [subNewOptVal, setSubNewOptVal] = useState('');
-  const [subNewOptLabel, setSubNewOptLabel] = useState('');
-  const [subNewOptDesc, setSubNewOptDesc] = useState('');
-  const [subBatchText, setSubBatchText] = useState('');
-  const [showSubBatch, setShowSubBatch] = useState(false);
+  const {
+    newSubKey,
+    setNewSubKey,
+    newSubLabel,
+    setNewSubLabel,
+    newSubType,
+    setNewSubType,
+    expandedSubIndex,
+    setExpandedSubIndex,
+    subNewOptVal,
+    setSubNewOptVal,
+    subNewOptLabel,
+    setSubNewOptLabel,
+    subNewOptDesc,
+    setSubNewOptDesc,
+    subBatchText,
+    setSubBatchText,
+    showSubBatch,
+    setShowSubBatch,
+    handleAddSubField,
+    handleRemoveSubField,
+    handleUpdateSubField,
+    handleAddSubEnumOption,
+    handleBatchAddSubEnum,
+    handleRemoveSubEnumOption,
+  } = useArrayObjectFieldEditor(formData, setFormData);
 
   if (!isOpen) return null;
 
@@ -92,182 +100,6 @@ export const FieldRuleEditor: React.FC<FieldRuleEditorProps> = ({
       key: derivedKey,
       id: cleanPath.replace(/\./g, '_') || prev.id,
     }));
-  };
-
-  // Top-level enum options handlers
-  const handleAddOption = () => {
-    if (!newOptionValue.trim()) return;
-    const newOpt: EnumOption = {
-      value: newOptionValue.trim(),
-      label: newOptionLabel.trim() || newOptionValue.trim(),
-      description: newOptionDesc.trim() || undefined,
-    };
-    setFormData((prev) => ({
-      ...prev,
-      constraints: {
-        ...prev.constraints,
-        options: [...(prev.constraints.options || []), newOpt],
-      },
-    }));
-    setNewOptionValue('');
-    setNewOptionLabel('');
-    setNewOptionDesc('');
-  };
-
-  const handleBatchAddEnum = () => {
-    if (!batchEnumText.trim()) return;
-    const items = batchEnumText
-      .split(/[,，\n]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const newOptions: EnumOption[] = items.map((val) => ({
-      value: val,
-      label: val,
-      description: `可选值: ${val}`,
-    }));
-
-    setFormData((prev) => ({
-      ...prev,
-      constraints: {
-        ...prev.constraints,
-        options: [...(prev.constraints.options || []), ...newOptions],
-      },
-    }));
-    setBatchEnumText('');
-    setShowBatchEnum(false);
-  };
-
-  const handleRemoveOption = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      constraints: {
-        ...prev.constraints,
-        options: (prev.constraints.options || []).filter((_, i) => i !== index),
-      },
-    }));
-  };
-
-  const handleUpdateOption = (index: number, patch: Partial<EnumOption>) => {
-    setFormData((prev) => ({
-      ...prev,
-      constraints: {
-        ...prev.constraints,
-        options: (prev.constraints.options || []).map((opt, i) =>
-          i === index ? { ...opt, ...patch } : opt
-        ),
-      },
-    }));
-  };
-
-  // Add subfield to itemFields
-  const handleAddSubField = () => {
-    if (!newSubKey.trim()) return;
-    const newSub: FieldDefinition = {
-      id: `${formData.path}_sub_${newSubKey.trim()}`,
-      key: newSubKey.trim(),
-      path: newSubKey.trim(),
-      label: newSubLabel.trim() || newSubKey.trim(),
-      description: `子项字段 ${newSubKey.trim()}`,
-      category: formData.category,
-      type: newSubType,
-      required: false,
-      defaultValue: newSubType === 'number' ? 0 : newSubType === 'boolean' ? false : '',
-      constraints: {
-        options: newSubType === 'enum' ? [] : undefined,
-      },
-    };
-    const nextList = [...(formData.itemFields || []), newSub];
-    setFormData((prev) => ({
-      ...prev,
-      itemFields: nextList,
-    }));
-    setNewSubKey('');
-    setNewSubLabel('');
-    setExpandedSubIndex(nextList.length - 1);
-  };
-
-  const handleRemoveSubField = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      itemFields: (prev.itemFields || []).filter((_, i) => i !== index),
-    }));
-    if (expandedSubIndex === index) {
-      setExpandedSubIndex(null);
-    }
-  };
-
-  const handleUpdateSubField = (index: number, patch: Partial<FieldDefinition>) => {
-    setFormData((prev) => ({
-      ...prev,
-      itemFields: (prev.itemFields || []).map((sub, i) =>
-        i === index ? { ...sub, ...patch } : sub
-      ),
-    }));
-  };
-
-  // Subfield enum options handlers
-  const handleAddSubEnumOption = (subIndex: number) => {
-    if (!subNewOptVal.trim()) return;
-    const targetSub = formData.itemFields?.[subIndex];
-    if (!targetSub) return;
-
-    const opt: EnumOption = {
-      value: subNewOptVal.trim(),
-      label: subNewOptLabel.trim() || subNewOptVal.trim(),
-      description: subNewOptDesc.trim() || undefined,
-    };
-
-    const nextOptions = [...(targetSub.constraints?.options || []), opt];
-    handleUpdateSubField(subIndex, {
-      constraints: {
-        ...targetSub.constraints,
-        options: nextOptions,
-      },
-    });
-
-    setSubNewOptVal('');
-    setSubNewOptLabel('');
-    setSubNewOptDesc('');
-  };
-
-  const handleBatchAddSubEnum = (subIndex: number) => {
-    if (!subBatchText.trim()) return;
-    const targetSub = formData.itemFields?.[subIndex];
-    if (!targetSub) return;
-
-    const items = subBatchText
-      .split(/[,，\n]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-    const newOpts: EnumOption[] = items.map((val) => ({
-      value: val,
-      label: val,
-      description: `可选值: ${val}`,
-    }));
-
-    handleUpdateSubField(subIndex, {
-      constraints: {
-        ...targetSub.constraints,
-        options: [...(targetSub.constraints?.options || []), ...newOpts],
-      },
-    });
-
-    setSubBatchText('');
-    setShowSubBatch(false);
-  };
-
-  const handleRemoveSubEnumOption = (subIndex: number, optIndex: number) => {
-    const targetSub = formData.itemFields?.[subIndex];
-    if (!targetSub) return;
-    const nextOptions = (targetSub.constraints?.options || []).filter(
-      (_, i) => i !== optIndex
-    );
-    handleUpdateSubField(subIndex, {
-      constraints: {
-        ...targetSub.constraints,
-        options: nextOptions,
-      },
-    });
   };
 
   const handleSave = () => {
@@ -455,328 +287,25 @@ export const FieldRuleEditor: React.FC<FieldRuleEditorProps> = ({
 
           {/* Section 3: Type Constraints */}
 
-          {/* 3.1: Top-level Enum Options Editor */}
           {formData.type === 'enum' && (
-            <div className="space-y-4 pt-4 border-t border-slate-800/80">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <List className="w-3.5 h-3.5 text-indigo-400" />
-                    枚举候选值管理 (运维只能在这些选项中选择)
-                  </h3>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    为每个选项提供明确的取值、中文名称和场景说明
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowBatchEnum(!showBatchEnum)}
-                  className="text-xs text-indigo-400 hover:underline"
-                >
-                  {showBatchEnum ? '单条添加' : '批量快捷导入'}
-                </button>
-              </div>
-
-              {/* Batch input box */}
-              {showBatchEnum && (
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
-                  <label className="text-xs text-slate-300 block">
-                    输入多个选项（以逗号或换行分隔，如：round_robin, least_conn, ip_hash）
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={batchEnumText}
-                    onChange={(e) => setBatchEnumText(e.target.value)}
-                    placeholder="例如: dev, test, staging, prod"
-                    className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleBatchAddEnum}
-                    className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium"
-                  >
-                    确认批量添加
-                  </button>
-                </div>
-              )}
-
-              {/* Add Single Option Row */}
-              <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
-                <span className="text-xs font-medium text-slate-300 block">
-                  添加新候选值：
-                </span>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <input
-                    type="text"
-                    value={newOptionValue}
-                    onChange={(e) => setNewOptionValue(e.target.value)}
-                    placeholder="* 选项实际值 (如 cluster)"
-                    className="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                  />
-                  <input
-                    type="text"
-                    value={newOptionLabel}
-                    onChange={(e) => setNewOptionLabel(e.target.value)}
-                    placeholder="中文显示名 (如 分布式分片集群)"
-                    className="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
-                  />
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      value={newOptionDesc}
-                      onChange={(e) => setNewOptionDesc(e.target.value)}
-                      placeholder="用途说明 (如 适用于生产高可用)"
-                      className="flex-1 px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddOption}
-                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium flex items-center gap-1 shrink-0"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      添加
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Current Options List (Editable inline) */}
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {(formData.constraints.options || []).map((opt, idx) => (
-                  <div
-                    key={idx}
-                    className="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs grid grid-cols-1 md:grid-cols-12 gap-2 items-center"
-                  >
-                    <div className="md:col-span-3">
-                      <input
-                        type="text"
-                        value={String(opt.value)}
-                        onChange={(e) => handleUpdateOption(idx, { value: e.target.value })}
-                        className="w-full px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded font-mono text-indigo-300"
-                        placeholder="值"
-                      />
-                    </div>
-                    <div className="md:col-span-4">
-                      <input
-                        type="text"
-                        value={opt.label}
-                        onChange={(e) => handleUpdateOption(idx, { label: e.target.value })}
-                        className="w-full px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded text-white"
-                        placeholder="显示名"
-                      />
-                    </div>
-                    <div className="md:col-span-4">
-                      <input
-                        type="text"
-                        value={opt.description || ''}
-                        onChange={(e) => handleUpdateOption(idx, { description: e.target.value })}
-                        className="w-full px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded text-slate-300"
-                        placeholder="说明"
-                      />
-                    </div>
-                    <div className="md:col-span-1 text-right">
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveOption(idx)}
-                        className="p-1 text-slate-500 hover:text-rose-400"
-                        title="删除该选项"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-
-                {(formData.constraints.options || []).length === 0 && (
-                  <div className="text-center py-6 text-xs text-rose-400 bg-rose-950/20 border border-rose-800/30 rounded-xl">
-                    ⚠️ 当前尚未配置任何枚举选项，请在上方添加至少一个候选值
-                  </div>
-                )}
-              </div>
-            </div>
+            <EnumOptionsEditor
+              options={formData.constraints.options || []}
+              onChange={(options) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  constraints: { ...prev.constraints, options },
+                }))
+              }
+            />
           )}
 
-          {/* 3.2: Number & Port Constraints */}
-          {(formData.type === 'number' || formData.type === 'port') && (
-            <div className="space-y-3 pt-4 border-t border-slate-800/80">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                3. 数值边界与计量单位
-              </h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-950/40 p-3.5 rounded-xl border border-slate-800">
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    最小值 (Min)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.constraints.min ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          min: e.target.value === '' ? undefined : Number(e.target.value),
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                    placeholder="如 1 或 1024"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    最大值 (Max)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.constraints.max ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          max: e.target.value === '' ? undefined : Number(e.target.value),
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                    placeholder="如 65535"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    步长 (Step)
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.constraints.step ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          step: e.target.value === '' ? undefined : Number(e.target.value),
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                    placeholder="如 1 或 100"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    计量单位 (Unit)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.constraints.unit ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          unit: e.target.value || undefined,
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    placeholder="如 ms, 秒, 个, QPS"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* 3.3: String, Secret, IP, URL Constraints */}
-          {['string', 'secret', 'ip', 'url'].includes(formData.type) && (
-            <div className="space-y-3 pt-4 border-t border-slate-800/80">
-              <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                3. 字符串长度与正则校验规则
-              </h3>
-              <div className="grid grid-cols-2 gap-3 bg-slate-950/40 p-3.5 rounded-xl border border-slate-800">
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    最小字符长度
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.constraints.minLength ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          minLength: e.target.value === '' ? undefined : Number(e.target.value),
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    最大字符长度
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.constraints.maxLength ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          maxLength: e.target.value === '' ? undefined : Number(e.target.value),
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                    placeholder="128"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    正则表达式约束 (Regex)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.constraints.pattern ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          pattern: e.target.value || undefined,
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
-                    placeholder="例如: ^[a-zA-Z0-9_-]+$"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="text-[11px] font-medium text-slate-400 block mb-1">
-                    校验不通过时的报错文案
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.constraints.patternDescription ?? ''}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        constraints: {
-                          ...formData.constraints,
-                          patternDescription: e.target.value || undefined,
-                        },
-                      })
-                    }
-                    className="w-full px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
-                    placeholder="例如: 只能包含字母、数字和下划线"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
+          <ScalarConstraintsEditor
+            type={formData.type}
+            constraints={formData.constraints}
+            onChange={(constraints) =>
+              setFormData((prev) => ({ ...prev, constraints }))
+            }
+          />
 
           {/* 3.4: Array of Objects Template (子项模板与子项详细配置) */}
           {formData.type === 'array_object' && (

@@ -14,11 +14,12 @@ import {
   ShieldCheck,
   ArrowRight,
   Info,
-  Package,
 } from 'lucide-react';
+import { ConfigPreviewPanel, type ConfigPreviewResult } from './ConfigPreviewPanel';
 import { resolveSchemaPackageFromJson } from '../../utils/schemaInfer';
+import { fetchRemoteJson } from '../../utils/remoteConfig';
 import { ConfigSchemaPackage, FieldDefinition, ConfigCategory } from '../../types/config';
-import { SHOWCASE_SCHEMA_PACKAGE } from '../../data/mockTemplates';
+import { PRESET_SCHEMA_SNIPPETS } from '../../data/configLoadPresets';
 import { useI18n } from '../../i18n';
 
 export interface ConfigLoadResult {
@@ -41,223 +42,6 @@ interface ConfigLoadModalProps {
   initialTab?: 'upload' | 'paste' | 'remote';
   initialUrl?: string;
 }
-
-// 供快速测试与体验的标准开发约束规范包样例
-const PRESET_SCHEMA_SNIPPETS = [
-  {
-    name: 'CloudEnterprise 云原生服务平台规范 (全能力约束规范包)',
-    desc: '包含端口边界、IP/URL校验、枚举单选、密码脱敏、高危开关与节点对象列表',
-    package: SHOWCASE_SCHEMA_PACKAGE,
-  },
-  {
-    name: '分布式集群与工作流引擎约束规范',
-    desc: '开发针对集群心跳时序、故障转移重试与服务节点数组定义的约束规范',
-    package: {
-      id: 'pkg-cluster-workflow',
-      name: '分布式集群与工作流引擎约束规范',
-      version: '1.2.0',
-      description: '开发团队交付的集群参数约束：包含心跳时序、故障转移重试限制与节点对象列表',
-      author: '中间件架构组',
-      updatedAt: '2026-10-12',
-      categories: [
-        { id: 'cat_cluster', name: '集群基础运行' },
-        { id: 'cat_nodes', name: '计算节点集群列表' },
-      ],
-      fields: [
-        {
-          id: 'cluster_name',
-          key: 'ClusterName',
-          path: 'Cluster.ClusterName',
-          label: '集群唯一标识名',
-          description: '生产云原生集群的命名标识',
-          category: '集群基础运行',
-          type: 'string',
-          required: true,
-          defaultValue: 'prod-cloud-cluster',
-          constraints: { minLength: 3, maxLength: 50 },
-        },
-        {
-          id: 'heartbeat_interval',
-          key: 'HeartbeatIntervalSeconds',
-          path: 'Cluster.HeartbeatIntervalSeconds',
-          label: '心跳上报间隔 (秒)',
-          description: '节点与中心控制面的探活时序间隔，推荐 15 秒',
-          category: '集群基础运行',
-          type: 'number',
-          required: true,
-          defaultValue: 15,
-          constraints: { min: 5, max: 120, unit: '秒' },
-        },
-        {
-          id: 'max_retries',
-          key: 'MaxFailoverRetries',
-          path: 'Cluster.MaxFailoverRetries',
-          label: '故障转移重试上限',
-          description: '主节点心跳丢失后自动漂移重试的最大次数',
-          category: '集群基础运行',
-          type: 'number',
-          required: true,
-          defaultValue: 3,
-          constraints: { min: 1, max: 10, unit: '次' },
-        },
-        {
-          id: 'nodes_list',
-          key: 'Nodes',
-          path: 'Cluster.Nodes',
-          label: '计算服务节点集群列表',
-          description: '多服务节点对象列表，运维可动态增减节点与调整并发度',
-          category: '计算节点集群列表',
-          type: 'array_object',
-          required: true,
-          defaultValue: [
-            {
-              NodeName: '计算任务主节点-01',
-              Host: '192.168.10.21',
-              Port: 8081,
-              Role: 'Master',
-              ConcurrencyLimit: 32,
-              EnableAutoScaling: true,
-              AssignedQueues: ['high-priority', 'batch-jobs'],
-            },
-            {
-              NodeName: '数据流聚合节点-02',
-              Host: '192.168.10.22',
-              Port: 8082,
-              Role: 'Worker',
-              ConcurrencyLimit: 16,
-              EnableAutoScaling: true,
-              AssignedQueues: ['stream-telemetry'],
-            },
-          ],
-          itemTitleKey: 'NodeName',
-          constraints: { minItems: 1, maxItems: 30 },
-          itemFields: [
-            {
-              id: 'node_name',
-              key: 'NodeName',
-              path: 'NodeName',
-              label: '节点标识名',
-              description: '服务器节点名称',
-              category: '计算节点集群列表',
-              type: 'string',
-              required: true,
-              defaultValue: '新节点',
-              constraints: {},
-            },
-            {
-              id: 'node_host',
-              key: 'Host',
-              path: 'Host',
-              label: '内网 IP',
-              description: '服务器 IP 地址',
-              category: '计算节点集群列表',
-              type: 'ip',
-              required: true,
-              defaultValue: '192.168.1.1',
-              constraints: {},
-            },
-            {
-              id: 'node_port',
-              key: 'Port',
-              path: 'Port',
-              label: 'RPC 监听端口',
-              description: '通信端口 (1024~65535)',
-              category: '计算节点集群列表',
-              type: 'port',
-              required: true,
-              defaultValue: 8080,
-              constraints: { min: 1024, max: 65535, unit: 'Port' },
-            },
-            {
-              id: 'node_role',
-              key: 'Role',
-              path: 'Role',
-              label: '角色职责',
-              description: '主控节点或工作节点',
-              category: '计算节点集群列表',
-              type: 'enum',
-              required: true,
-              defaultValue: 'Worker',
-              constraints: {
-                options: [
-                  { value: 'Master', label: 'Master (主控调度)' },
-                  { value: 'Worker', label: 'Worker (计算执行)' },
-                  { value: 'Standby', label: 'Standby (热备节点)' },
-                ],
-              },
-            },
-            {
-              id: 'node_concurrency',
-              key: 'ConcurrencyLimit',
-              path: 'ConcurrencyLimit',
-              label: '最大并发度',
-              description: '单个 Worker 承载的最大任务数',
-              category: '计算节点集群列表',
-              type: 'number',
-              required: true,
-              defaultValue: 16,
-              constraints: { min: 1, max: 128, unit: '并发' },
-            },
-          ],
-        },
-      ],
-      referenceExamples: [
-        {
-          id: 'ref-default',
-          name: '生产标准双节点基线',
-          environment: 'production',
-          summary: '一主一从高可用部署基线',
-          detailedNotes: '开发交付给运维的推荐标准配置基准。',
-          config: {
-            Cluster: {
-              ClusterName: 'prod-cloud-cluster',
-              HeartbeatIntervalSeconds: 15,
-              MaxFailoverRetries: 3,
-              Nodes: [
-                {
-                  NodeName: '计算任务主节点-01',
-                  Host: '192.168.10.21',
-                  Port: 8081,
-                  Role: 'Master',
-                  ConcurrencyLimit: 32,
-                  EnableAutoScaling: true,
-                  AssignedQueues: ['high-priority'],
-                },
-                {
-                  NodeName: '数据流聚合节点-02',
-                  Host: '192.168.10.22',
-                  Port: 8082,
-                  Role: 'Worker',
-                  ConcurrencyLimit: 16,
-                  EnableAutoScaling: true,
-                  AssignedQueues: ['stream-telemetry'],
-                },
-              ],
-            },
-          },
-        },
-      ],
-      defaultConfig: {
-        Cluster: {
-          ClusterName: 'prod-cloud-cluster',
-          HeartbeatIntervalSeconds: 15,
-          MaxFailoverRetries: 3,
-          Nodes: [
-            {
-              NodeName: '计算任务主节点-01',
-              Host: '192.168.10.21',
-              Port: 8081,
-              Role: 'Master',
-              ConcurrencyLimit: 32,
-              EnableAutoScaling: true,
-              AssignedQueues: ['high-priority'],
-            },
-          ],
-        },
-      },
-    },
-  },
-];
 
 export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
   isOpen,
@@ -285,11 +69,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
   const [lastFetchedUrl, setLastFetchedUrl] = useState<string | null>(null);
 
   // Parsed schema & config state
-  const [resolvedResult, setResolvedResult] = useState<{
-    schemaPackage: ConfigSchemaPackage;
-    isStandardSchema: boolean;
-    configData: Record<string, any>;
-  } | null>(null);
+  const [resolvedResult, setResolvedResult] = useState<ConfigPreviewResult | null>(null);
 
   const [parseError, setParseError] = useState<string | null>(null);
   const [configName, setConfigName] = useState('');
@@ -445,43 +225,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
     setFetchError(null);
 
     try {
-      let data: any = null;
-
-      // 1. Direct fetch with timeout
-      try {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 8000);
-        const res = await fetch(url, {
-          signal: controller.signal,
-          headers: { Accept: 'application/json, text/plain, */*' },
-        });
-        clearTimeout(timer);
-
-        if (res.ok) {
-          const text = await res.text();
-          data = JSON.parse(text);
-        } else {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-      } catch (directErr: any) {
-        // 2. CORS fallback
-        try {
-          const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
-          const proxyController = new AbortController();
-          const proxyTimer = setTimeout(() => proxyController.abort(), 8000);
-          const proxyRes = await fetch(proxyUrl, { signal: proxyController.signal });
-          clearTimeout(proxyTimer);
-
-          if (proxyRes.ok) {
-            const proxyText = await proxyRes.text();
-            data = JSON.parse(proxyText);
-          } else {
-            throw new Error('代理中继服务不可用');
-          }
-        } catch {
-          throw directErr;
-        }
-      }
+      const data = await fetchRemoteJson(url, 8000);
 
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
         throw new Error('远程返回的内容不是标准的 JSON 键值对对象');
@@ -832,80 +576,13 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
             </div>
           )}
 
-          {/* PARSED DATA PREVIEW & SCHEMA SETTINGS */}
-          {resolvedResult && (
-            <div className="p-4 rounded-2xl bg-indigo-950/20 border border-indigo-800/40 space-y-4 animate-in fade-in">
-              <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-indigo-800/30">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  <span className="text-xs font-semibold text-emerald-300">
-                    {resolvedResult.isStandardSchema
-                      ? '✓ 标准开发约束规范包解析成功'
-                      : '✓ 配置文件解析完成（已推断基础约束模型）'}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-3 text-xs text-slate-300">
-                  <span className="inline-flex items-center gap-1 font-mono">
-                    <span className="text-slate-400">字段约束项:</span>
-                    <strong className="text-white">
-                      {resolvedResult.schemaPackage.fields.length} 个
-                    </strong>
-                  </span>
-                  <span>·</span>
-                  <span className="inline-flex items-center gap-1 font-mono">
-                    <span className="text-slate-400">参考方案:</span>
-                    <strong className="text-white">
-                      {resolvedResult.schemaPackage.referenceExamples.length} 个
-                    </strong>
-                  </span>
-                  <span>·</span>
-                  <span className="inline-flex items-center gap-1 font-mono">
-                    <span className="text-slate-400">分类分组:</span>
-                    <strong className="text-white">
-                      {resolvedResult.schemaPackage.categories.length} 个
-                    </strong>
-                  </span>
-                </div>
-              </div>
-
-              {/* Editable Name & Description */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    约束规范名称
-                  </label>
-                  <input
-                    type="text"
-                    value={configName}
-                    onChange={(e) => setConfigName(e.target.value)}
-                    placeholder="例如：微服务核心运行约束规范"
-                    className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                    适用范围与交付说明
-                  </label>
-                  <input
-                    type="text"
-                    value={configDesc}
-                    onChange={(e) => setConfigDesc(e.target.value)}
-                    placeholder="简述此约束规范适用的业务系统与环境"
-                    className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-
-              {/* Notice regarding constraints */}
-              <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-                <Package className="w-4 h-4 text-indigo-400 shrink-0" />
-                <span>
-                  载入后，运维端将严格依据此规范进行配置生成，内置实时校验防护与基线对照。
-                </span>
-              </div>
-            </div>
-          )}
+          <ConfigPreviewPanel
+            result={resolvedResult}
+            name={configName}
+            description={configDesc}
+            onNameChange={setConfigName}
+            onDescriptionChange={setConfigDesc}
+          />
 
           {/* Parse error banner */}
           {parseError && (
