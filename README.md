@@ -16,7 +16,7 @@
   📦 <a href="#-getting-started">Getting Started</a>
 </p>
 
-[![Live Demo](https://img.shields.io/badge/Demo-Online_App-blue.svg?logo=googlechrome)](https://sangyuxiaowu.github.io/不知道)
+[![Live Demo](https://img.shields.io/badge/Demo-Online_App-blue.svg?logo=googlechrome)](https://sangyuxiaowu.github.io/configflow)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![React](https://img.shields.io/badge/React-19.0-61dafb.svg?logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178c6.svg?logo=typescript)](https://www.typescriptlang.org/)
@@ -45,7 +45,6 @@
 - [Directory Structure](#-directory-structure)
 - [Getting Started](#-getting-started)
 - [User Guide](#-user-guide)
-- [在线体验与中文文档 (Chinese Version)](./README.zh-CN.md)
 
 ---
 
