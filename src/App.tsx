@@ -307,7 +307,7 @@ export function AppContent() {
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30 selection:text-indigo-200">
         <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur-md px-4 py-2.5 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/icon.svg" alt="Logo" className="w-5 h-5 rounded" />
+            <img src="./icon.svg" alt="Logo" className="w-5 h-5 rounded" />
             <span className="text-xs font-bold text-white tracking-tight">OpsConfig Studio</span>
           </div>
           <div className="flex items-center gap-2">

@@ -53,7 +53,7 @@ export const PWAInstallButton: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-indigo-950 border border-indigo-700/60 flex items-center justify-center text-indigo-400">
-                    <img src="/icon.svg" alt="App Icon" className="w-5 h-5 rounded" />
+                    <img src="./icon.svg" alt="App Icon" className="w-5 h-5 rounded" />
                   </div>
                   <h3 className="text-sm font-semibold text-white">{t.pwa.iosInstallTitle}</h3>
                 </div>
@@ -125,7 +125,7 @@ export const PWAInstallButton: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-slate-950 border border-indigo-700/50 flex items-center justify-center p-1">
-                  <img src="/icon.svg" alt="App Icon" className="w-full h-full rounded-lg" />
+                  <img src="./icon.svg" alt="App Icon" className="w-full h-full rounded-lg" />
                 </div>
                 <div>
                   <h3 className="text-sm font-semibold text-white">{t.pwa.desktopGuideTitle}</h3>
