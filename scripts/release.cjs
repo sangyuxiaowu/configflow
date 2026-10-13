@@ -1,4 +1,4 @@
-const { execFileSync } = require('node:child_process');
+const { execFileSync, execSync } = require('node:child_process');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -59,7 +59,7 @@ if (readGit(['tag', '--list', tag]) === tag) {
 packageJson.version = version;
 fs.writeFileSync(packagePath, `${JSON.stringify(packageJson, null, 2)}\n`);
 
-execFileSync('npm', ['run', 'build:tauri'], { cwd: root, stdio: 'inherit' });
+execSync('npm run build:tauri', { cwd: root, stdio: 'inherit' });
 
 const filesToStage = [
   'package.json',
