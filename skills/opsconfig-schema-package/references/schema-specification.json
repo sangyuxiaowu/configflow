@@ -1,0 +1,184 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ConfigSchemaPackage",
+  "description": "JSON Schema specification for OpsConfig Studio configuration contract and schema packages",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "version",
+    "description",
+    "categories",
+    "fields",
+    "referenceExamples",
+    "defaultConfig"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique package identifier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable package name"
+    },
+    "version": {
+      "type": "string",
+      "description": "SemVer string, e.g. 1.0.0"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed explanation of the configuration schema package"
+    },
+    "author": {
+      "type": "string",
+      "description": "Author team or architect name"
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "Last updated date (YYYY-MM-DD)"
+    },
+    "categories": {
+      "type": "array",
+      "description": "List of configuration logical groups",
+      "items": {
+        "type": "object",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "icon": { "type": "string" }
+        }
+      }
+    },
+    "fields": {
+      "type": "array",
+      "description": "List of field definitions and constraint rules",
+      "items": {
+        "$ref": "#/definitions/FieldDefinition"
+      }
+    },
+    "referenceExamples": {
+      "type": "array",
+      "description": "List of multi-environment reference profiles",
+      "items": {
+        "$ref": "#/definitions/ReferenceExample"
+      }
+    },
+    "defaultConfig": {
+      "type": "object",
+      "description": "Baseline default configuration JSON object matching the defined fields"
+    }
+  },
+  "definitions": {
+    "FieldDefinition": {
+      "type": "object",
+      "required": [
+        "id",
+        "key",
+        "path",
+        "label",
+        "description",
+        "category",
+        "type",
+        "required",
+        "defaultValue"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "key": { "type": "string" },
+        "path": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "type": {
+          "type": "string",
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "enum",
+            "port",
+            "ip",
+            "url",
+            "secret",
+            "array_string",
+            "array_object",
+            "object"
+          ]
+        },
+        "required": { "type": "boolean" },
+        "defaultValue": {},
+        "placeholder": { "type": "string" },
+        "isSensitive": { "type": "boolean" },
+        "isDangerous": { "type": "boolean" },
+        "requiresRestart": { "type": "boolean" },
+        "itemTitleKey": { "type": "string" },
+        "constraints": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" },
+            "step": { "type": "number" },
+            "unit": { "type": "string" },
+            "minLength": { "type": "number" },
+            "maxLength": { "type": "number" },
+            "pattern": { "type": "string" },
+            "patternDescription": { "type": "string" },
+            "minItems": { "type": "number" },
+            "maxItems": { "type": "number" },
+            "options": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["value", "label"],
+                "properties": {
+                  "value": { "type": ["string", "number"] },
+                  "label": { "type": "string" },
+                  "description": { "type": "string" },
+                  "badge": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "itemFields": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FieldDefinition"
+          }
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/FieldDefinition"
+          }
+        }
+      }
+    },
+    "ReferenceExample": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "environment",
+        "summary",
+        "detailedNotes",
+        "config"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "environment": {
+          "type": "string",
+          "enum": ["production", "staging", "development", "testing"]
+        },
+        "summary": { "type": "string" },
+        "detailedNotes": { "type": "string" },
+        "recommendedHardware": { "type": "string" },
+        "config": { "type": "object" }
+      }
+    }
+  }
+}

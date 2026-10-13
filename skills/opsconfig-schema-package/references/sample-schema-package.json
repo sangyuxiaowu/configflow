@@ -1,0 +1,369 @@
+{
+  "id": "pkg-cloud-gateway-prod",
+  "name": "CloudGateway 企业级网关运行规范",
+  "version": "1.0.0",
+  "description": "企业级微服务 API 网关标准运行约束规范包，包含网络接入、数据源连接池、安全秘钥与路由集群服务列表",
+  "author": "基础平台架构委员会",
+  "updatedAt": "2026-10-13",
+  "categories": [
+    {
+      "id": "cat_network",
+      "name": "基础网络与网关监听",
+      "description": "HTTP/TCP 监听端口、绑定地址与外部网关"
+    },
+    {
+      "id": "cat_security",
+      "name": "安全策略与凭据",
+      "description": "TLS 加密开关、管理凭据及跨域白名单"
+    },
+    {
+      "id": "cat_routing",
+      "name": "路由转发与服务治理",
+      "description": "负载均衡模式与微服务路由列表 (array_object)"
+    }
+  ],
+  "fields": [
+    {
+      "id": "net_listen_port",
+      "key": "listenPort",
+      "path": "network.listenPort",
+      "label": "网关 HTTP 监听端口",
+      "description": "外部请求接入的网络端口，建议在 1024~65535 之间配置，避免与系统特权端口冲突",
+      "category": "基础网络与网关监听",
+      "type": "port",
+      "required": true,
+      "defaultValue": 8080,
+      "requiresRestart": true,
+      "constraints": {
+        "min": 1024,
+        "max": 65535,
+        "unit": "Port"
+      }
+    },
+    {
+      "id": "net_bind_host",
+      "key": "bindHost",
+      "path": "network.bindHost",
+      "label": "网络监听绑定 IP",
+      "description": "网关监听的 IP 地址，生产容器集群推荐配置 0.0.0.0 以监听全部网络流量",
+      "category": "基础网络与网关监听",
+      "type": "ip",
+      "required": true,
+      "defaultValue": "0.0.0.0",
+      "requiresRestart": true,
+      "constraints": {}
+    },
+    {
+      "id": "net_timeout_ms",
+      "key": "requestTimeoutMs",
+      "path": "network.requestTimeoutMs",
+      "label": "请求响应超时时间 (毫秒)",
+      "description": "网关转发后端等待的最长时间，超过此阈值将主动断开并返回 504 Gateway Timeout",
+      "category": "基础网络与网关监听",
+      "type": "number",
+      "required": true,
+      "defaultValue": 5000,
+      "constraints": {
+        "min": 500,
+        "max": 60000,
+        "step": 500,
+        "unit": "ms"
+      }
+    },
+    {
+      "id": "sec_enable_tls",
+      "key": "enableTls",
+      "path": "security.enableTls",
+      "label": "强制开启 TLS 链路加密",
+      "description": "是否启用 HTTPS/TLS 安全传输，生产环境强烈建议开启以防止明文窃听",
+      "category": "安全策略与凭据",
+      "type": "boolean",
+      "required": true,
+      "defaultValue": true,
+      "requiresRestart": true,
+      "constraints": {}
+    },
+    {
+      "id": "sec_admin_token",
+      "key": "adminSecretToken",
+      "path": "security.adminSecretToken",
+      "label": "网关运维管理 API 凭据 Token",
+      "description": "访问网关热重载和状态探针管理接口的鉴权私钥，界面默认脱敏遮罩保护",
+      "category": "安全策略与凭据",
+      "type": "secret",
+      "required": true,
+      "defaultValue": "gw-sec-prod-token-9883",
+      "isSensitive": true,
+      "isDangerous": true,
+      "constraints": {
+        "minLength": 16,
+        "maxLength": 64
+      }
+    },
+    {
+      "id": "sec_cors_origins",
+      "key": "corsOrigins",
+      "path": "security.corsOrigins",
+      "label": "跨域请求允许域名列表 (CORS)",
+      "description": "允许跨域访问网关的合法前端域名白名单列表",
+      "category": "安全策略与凭据",
+      "type": "array_string",
+      "required": false,
+      "defaultValue": [
+        "https://console.enterprise.org",
+        "https://app.enterprise.org"
+      ],
+      "constraints": {
+        "minItems": 1,
+        "maxItems": 20
+      }
+    },
+    {
+      "id": "route_lb_algorithm",
+      "key": "loadBalanceAlgorithm",
+      "path": "routing.loadBalanceAlgorithm",
+      "label": "后端负载均衡算法",
+      "description": "请求转发至后端多节点时的分发策略",
+      "category": "路由转发与服务治理",
+      "type": "enum",
+      "required": true,
+      "defaultValue": "round_robin",
+      "constraints": {
+        "options": [
+          {
+            "value": "round_robin",
+            "label": "加权轮询 (Round Robin)",
+            "description": "请求均匀轮流分发至各存活健康节点",
+            "badge": "默认推荐"
+          },
+          {
+            "value": "least_conn",
+            "label": "最小连接数优先 (Least Connections)",
+            "description": "将流量优先导向当前活跃连接数最少的节点，适合长连接场景"
+          },
+          {
+            "value": "ip_hash",
+            "label": "源 IP 哈希绑定 (IP Hash)",
+            "description": "根据客户端 IP 哈希路由，保持用户会话粘性"
+          }
+        ]
+      }
+    },
+    {
+      "id": "route_services_list",
+      "key": "services",
+      "path": "routing.services",
+      "label": "后端微服务路由转发规则列表",
+      "description": "定义网关代理的上游微服务集群。可动态添加、排序、克隆各微服务转发策略",
+      "category": "路由转发与服务治理",
+      "type": "array_object",
+      "required": true,
+      "itemTitleKey": "serviceName",
+      "defaultValue": [
+        {
+          "serviceName": "auth-identity-service",
+          "routePrefix": "/api/v1/auth",
+          "upstreamHost": "10.0.10.15",
+          "upstreamPort": 9001,
+          "enableCircuitBreaker": true
+        },
+        {
+          "serviceName": "order-transaction-service",
+          "routePrefix": "/api/v1/orders",
+          "upstreamHost": "10.0.10.16",
+          "upstreamPort": 9002,
+          "enableCircuitBreaker": true
+        }
+      ],
+      "constraints": {
+        "minItems": 1,
+        "maxItems": 50
+      },
+      "itemFields": [
+        {
+          "id": "item_service_name",
+          "key": "serviceName",
+          "path": "serviceName",
+          "label": "服务唯一标识",
+          "description": "上游微服务的英文名称",
+          "category": "路由转发与服务治理",
+          "type": "string",
+          "required": true,
+          "defaultValue": "new-upstream-service",
+          "constraints": {
+            "minLength": 3,
+            "maxLength": 60
+          }
+        },
+        {
+          "id": "item_route_prefix",
+          "key": "routePrefix",
+          "path": "routePrefix",
+          "label": "网关路由前缀",
+          "description": "网关匹配该前缀后自动转发至该服务，必须以 / 开头",
+          "category": "路由转发与服务治理",
+          "type": "string",
+          "required": true,
+          "defaultValue": "/api/v1/service",
+          "constraints": {
+            "pattern": "^\\/[a-zA-Z0-9_\\-\\.\\/]*$",
+            "patternDescription": "必须以斜杠 / 开头且为合法 URI 路径字符"
+          }
+        },
+        {
+          "id": "item_upstream_host",
+          "key": "upstreamHost",
+          "path": "upstreamHost",
+          "label": "上游主机地址 IP",
+          "description": "后端目标集群私网 IP",
+          "category": "路由转发与服务治理",
+          "type": "ip",
+          "required": true,
+          "defaultValue": "10.0.10.20",
+          "constraints": {}
+        },
+        {
+          "id": "item_upstream_port",
+          "key": "upstreamPort",
+          "path": "upstreamPort",
+          "label": "上游服务端口",
+          "description": "后端目标服务的网络监听端口",
+          "category": "路由转发与服务治理",
+          "type": "port",
+          "required": true,
+          "defaultValue": 8080,
+          "constraints": {
+            "min": 1,
+            "max": 65535,
+            "unit": "Port"
+          }
+        },
+        {
+          "id": "item_circuit_breaker",
+          "key": "enableCircuitBreaker",
+          "path": "enableCircuitBreaker",
+          "label": "开启自动熔断降级",
+          "description": "连续错误率超过 50% 时自动开启熔断，保护后端服务不被雪崩打垮",
+          "category": "路由转发与服务治理",
+          "type": "boolean",
+          "required": true,
+          "defaultValue": true,
+          "constraints": {}
+        }
+      ]
+    }
+  ],
+  "referenceExamples": [
+    {
+      "id": "ref_prod_ha",
+      "name": "生产高可用集群方案 (Prod HA)",
+      "environment": "production",
+      "summary": "适用于多节点企业级生产网络，开启全量安全防护与自动熔断",
+      "recommendedHardware": "8 Core CPU / 16GB RAM / 10Gbps 网卡",
+      "detailedNotes": "生产环境启用 TLS 强制传输加密与 5000ms 超时控制，配备高规格微服务熔断保护，防止级联故障。",
+      "config": {
+        "network": {
+          "listenPort": 443,
+          "bindHost": "0.0.0.0",
+          "requestTimeoutMs": 5000
+        },
+        "security": {
+          "enableTls": true,
+          "adminSecretToken": "gw-sec-prod-token-9883",
+          "corsOrigins": [
+            "https://console.enterprise.org",
+            "https://app.enterprise.org"
+          ]
+        },
+        "routing": {
+          "loadBalanceAlgorithm": "round_robin",
+          "services": [
+            {
+              "serviceName": "auth-identity-service",
+              "routePrefix": "/api/v1/auth",
+              "upstreamHost": "10.0.10.15",
+              "upstreamPort": 9001,
+              "enableCircuitBreaker": true
+            },
+            {
+              "serviceName": "order-transaction-service",
+              "routePrefix": "/api/v1/orders",
+              "upstreamHost": "10.0.10.16",
+              "upstreamPort": 9002,
+              "enableCircuitBreaker": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ref_dev_local",
+      "name": "本地开发/单机调试方案 (Dev Local)",
+      "environment": "development",
+      "summary": "适用于本地开发者快速启动调试，关闭繁琐鉴权限制，放宽超时",
+      "recommendedHardware": "2 Core CPU / 4GB RAM",
+      "detailedNotes": "本地单机环境使用 8080 端口与 127.0.0.1 绑定，超时放宽至 15000ms 便于断点单步调试。",
+      "config": {
+        "network": {
+          "listenPort": 8080,
+          "bindHost": "127.0.0.1",
+          "requestTimeoutMs": 15000
+        },
+        "security": {
+          "enableTls": false,
+          "adminSecretToken": "dev-debug-secret-token",
+          "corsOrigins": [
+            "http://localhost:3000",
+            "http://127.0.0.1:8080"
+          ]
+        },
+        "routing": {
+          "loadBalanceAlgorithm": "round_robin",
+          "services": [
+            {
+              "serviceName": "mock-dev-service",
+              "routePrefix": "/api/v1/mock",
+              "upstreamHost": "127.0.0.1",
+              "upstreamPort": 8081,
+              "enableCircuitBreaker": false
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "defaultConfig": {
+    "network": {
+      "listenPort": 8080,
+      "bindHost": "0.0.0.0",
+      "requestTimeoutMs": 5000
+    },
+    "security": {
+      "enableTls": true,
+      "adminSecretToken": "gw-sec-prod-token-9883",
+      "corsOrigins": [
+        "https://console.enterprise.org",
+        "https://app.enterprise.org"
+      ]
+    },
+    "routing": {
+      "loadBalanceAlgorithm": "round_robin",
+      "services": [
+        {
+          "serviceName": "auth-identity-service",
+          "routePrefix": "/api/v1/auth",
+          "upstreamHost": "10.0.10.15",
+          "upstreamPort": 9001,
+          "enableCircuitBreaker": true
+        },
+        {
+          "serviceName": "order-transaction-service",
+          "routePrefix": "/api/v1/orders",
+          "upstreamHost": "10.0.10.16",
+          "upstreamPort": 9002,
+          "enableCircuitBreaker": true
+        }
+      ]
+    }
+  }
+}
