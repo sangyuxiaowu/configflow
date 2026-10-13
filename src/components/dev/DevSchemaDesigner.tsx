@@ -184,7 +184,7 @@ export const DevSchemaDesigner: React.FC<DevSchemaDesignerProps> = ({
                     value={newSchemaName}
                     onChange={(e) => setNewSchemaName(e.target.value)}
                     className="w-full px-3.5 py-2 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
-                    placeholder="e.g. Microservice Cluster Spec"
+                    placeholder={t.dev.schemaNamePlaceholder}
                   />
                 </div>
 
@@ -210,7 +210,7 @@ export const DevSchemaDesigner: React.FC<DevSchemaDesignerProps> = ({
                     value={newSchemaAuthor}
                     onChange={(e) => setNewSchemaAuthor(e.target.value)}
                     className="w-full px-3.5 py-2 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
-                    placeholder="e.g. Architecture Committee"
+                    placeholder={t.dev.schemaAuthorPlaceholder}
                   />
                 </div>
 

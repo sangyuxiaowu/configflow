@@ -1,6 +1,12 @@
-import { SHOWCASE_SCHEMA_PACKAGE } from './mockTemplates';
+import { SHOWCASE_SCHEMA_PACKAGE, getShowcaseSchemaPackage } from './mockTemplates';
+import type { ConfigSchemaPackage, FieldDefinition } from '../types/config';
+import type { Language } from '../i18n/types';
 
-export const PRESET_SCHEMA_SNIPPETS = [
+export const PRESET_SCHEMA_SNIPPETS: {
+  name: string;
+  desc: string;
+  package: ConfigSchemaPackage;
+}[] = [
   {
     name: 'CloudEnterprise 云原生服务平台规范 (全能力约束规范包)',
     desc: '包含端口边界、IP/URL校验、枚举单选、密码脱敏、高危开关与节点对象列表',
@@ -215,3 +221,63 @@ export const PRESET_SCHEMA_SNIPPETS = [
     },
   },
 ];
+
+export function getPresetSchemaSnippets(language: Language) {
+  if (language === 'zh') return PRESET_SCHEMA_SNIPPETS;
+
+  const clusterPackage = PRESET_SCHEMA_SNIPPETS[1].package;
+  const metadata: Record<string, Pick<FieldDefinition, 'label' | 'description'>> = {
+    cluster_name: { label: 'Cluster Identifier', description: 'Unique name of the production cluster' },
+    heartbeat_interval: { label: 'Heartbeat Interval (Seconds)', description: 'Node heartbeat interval; recommended: 15 seconds' },
+    max_retries: { label: 'Maximum Failover Retries', description: 'Maximum retries after the primary node loses its heartbeat' },
+    nodes_list: { label: 'Compute Nodes', description: 'Service nodes with configurable membership and concurrency' },
+    node_name: { label: 'Node Identifier', description: 'Server node name' },
+    node_host: { label: 'Internal IP', description: 'Server IP address' },
+    node_port: { label: 'RPC Listening Port', description: 'Communication port (1024-65535)' },
+    node_role: { label: 'Node Role', description: 'Controller or worker node' },
+    node_concurrency: { label: 'Maximum Concurrency', description: 'Maximum tasks handled by one worker' },
+  };
+  const categories: Record<string, string> = {
+    cat_cluster: 'Cluster Settings',
+    cat_nodes: 'Compute Nodes',
+  };
+  const categoryNames = new Map(clusterPackage.categories.map(category => [category.name, categories[category.id]]));
+  const units: Record<string, string> = { '秒': 's', '次': 'retries', '并发': 'tasks' };
+  const localizeField = (field: FieldDefinition): FieldDefinition => ({
+    ...field,
+    ...metadata[field.id],
+    category: categoryNames.get(field.category) || field.category,
+    constraints: {
+      ...field.constraints,
+      unit: field.constraints.unit ? units[field.constraints.unit] || field.constraints.unit : undefined,
+      options: field.constraints.options?.map(option => ({ ...option, label: String(option.value) })),
+    },
+    itemFields: field.itemFields?.map(localizeField),
+  });
+  const localizedClusterPackage: ConfigSchemaPackage = {
+    ...clusterPackage,
+    name: 'Distributed Cluster & Workflow Engine Schema',
+    description: 'Cluster heartbeats, failover retry limits, and compute node constraints',
+    author: 'Middleware Architecture Team',
+    categories: clusterPackage.categories.map(category => ({ ...category, name: categories[category.id] })),
+    fields: clusterPackage.fields.map(localizeField),
+    referenceExamples: clusterPackage.referenceExamples.map(example => ({
+      ...example,
+      name: 'Production Two-Node Baseline',
+      summary: 'Primary and worker high-availability deployment',
+      detailedNotes: 'Recommended production configuration delivered by the development team.',
+    })),
+  };
+  return [
+    {
+      name: 'CloudEnterprise Cloud Native Platform Schema (Full Showcase)',
+      desc: 'Port ranges, IP/URL validation, enums, masked secrets, critical switches, and node lists',
+      package: getShowcaseSchemaPackage(language),
+    },
+    {
+      name: localizedClusterPackage.name,
+      desc: 'Cluster heartbeat timing, failover retries, and service node constraints',
+      package: localizedClusterPackage,
+    },
+  ];
+}

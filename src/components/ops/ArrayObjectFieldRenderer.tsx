@@ -29,7 +29,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
   allErrors,
 }) => {
   const { showToast } = useToast();
-  const { t, language } = useI18n();
+  const { t, language, format: formatMessage } = useI18n();
   const [expandedIndices, setExpandedIndices] = useState<Record<number, boolean>>({
     0: true,
   });
@@ -144,7 +144,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
             item.name ||
             item.serviceName ||
             item.NodeName ||
-            `配置项 #${index + 1}`;
+            formatMessage(t.details.item, { value0: index + 1 });
           const isExpanded = Boolean(expandedIndices[index]) || itemErrors.length > 0;
           const hostPort = item.Host || item.Port || item.host || item.port
             ? `${item.Host || item.host || ''}${item.Port || item.port ? `:${item.Port || item.port}` : ''}`
@@ -179,8 +179,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
                   )}
                   {itemErrors.length > 0 && (
                     <span className="text-[10px] bg-rose-950/80 text-rose-300 border border-rose-800/60 px-2 py-0.5 rounded font-medium shrink-0 flex items-center gap-1">
-                      <AlertCircle className="w-3 h-3 text-rose-400" />
-                      待修正 ({itemErrors.length})
+                      <AlertCircle className="w-3 h-3 text-rose-400" />{formatMessage(t.details.errors, { count: itemErrors.length })}
                     </span>
                   )}
                 </div>
@@ -194,7 +193,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
                     disabled={index === 0}
                     onClick={() => moveItem(index, 'up')}
                     className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-30 disabled:hover:text-slate-500"
-                    title="上移"
+                    title={t.details.moveUp}
                   >
                     <ArrowUp className="w-3.5 h-3.5" />
                   </button>
@@ -203,7 +202,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
                     disabled={index === items.length - 1}
                     onClick={() => moveItem(index, 'down')}
                     className="p-1 text-slate-500 hover:text-slate-300 disabled:opacity-30 disabled:hover:text-slate-500"
-                    title="下移"
+                    title={t.details.moveDown}
                   >
                     <ArrowDown className="w-3.5 h-3.5" />
                   </button>
@@ -211,7 +210,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
                     type="button"
                     onClick={() => duplicateItem(index)}
                     className="p-1 text-slate-400 hover:text-indigo-300"
-                    title="复制克隆此项"
+                    title={t.details.cloneItem}
                   >
                     <Copy className="w-3.5 h-3.5" />
                   </button>
@@ -219,7 +218,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
                     type="button"
                     onClick={() => deleteItem(index)}
                     className="p-1 text-slate-400 hover:text-rose-400"
-                    title="删除此项"
+                    title={t.details.deleteItem}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -227,7 +226,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
                     type="button"
                     onClick={() => toggleExpand(index)}
                     className="p-1 text-slate-400 hover:text-white ml-1"
-                    title={isExpanded ? '收起配置' : '展开配置'}
+                    title={isExpanded ? t.details.collapseItem : t.details.expandItem}
                   >
                     {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -246,7 +245,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
                       onUpdate={(key, nextValue) => updateItem(index, key, nextValue)}
                     />
                   ) : (
-                    <div className="text-xs text-slate-500">未定义子项字段模板</div>
+                    <div className="text-xs text-slate-500">{t.details.noItemFieldTemplateDefined}</div>
                   )}
                 </div>
               )}
@@ -255,9 +254,7 @@ export const ArrayObjectFieldRenderer: React.FC<ArrayObjectFieldRendererProps> =
         })}
 
         {items.length === 0 && (
-          <div className="p-8 text-center bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500">
-            当前列表为空，点击上方「新增一项配置」开始配置
-          </div>
+          <div className="p-8 text-center bg-slate-950/40 rounded-xl border border-slate-800 text-xs text-slate-500">{t.details.noItemsYetAddAnItemAbove}</div>
         )}
       </div>
     </div>

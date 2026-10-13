@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState } from 'react';
 import { X, Download, Copy, Check, FileJson, Package, ShieldCheck } from 'lucide-react';
 import { ConfigSchemaPackage } from '../../types/config';
@@ -15,6 +16,7 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
   isOpen,
   onClose,
 }) => {
+  const { t, format: formatMessage } = useI18n();
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'schema' | 'template'>('schema');
   const [copied, setCopied] = useState(false);
@@ -38,8 +40,8 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
     setCopied(true);
     showToast(
       activeTab === 'schema'
-        ? '已复制完整 Schema 约束规范 JSON'
-        : `已复制默认配置模板 ${outputFormat.toUpperCase()}`,
+        ? t.details.schemaPackageJsonCopied
+        : formatMessage(t.details.defaultConfigurationCopied, { value0: outputFormat.toUpperCase() }),
       'success'
     );
     setTimeout(() => setCopied(false), 2000);
@@ -65,7 +67,7 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    showToast(`已开始下载文件: ${filename}`, 'success');
+    showToast(formatMessage(t.details.downloadStarted, { value0: filename }), 'success');
   };
 
   return (
@@ -76,13 +78,9 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <Package className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-base font-semibold text-white">
-                导出配置规范与元模型 JSON (面向发布与交接)
-              </h2>
+              <h2 className="text-base font-semibold text-white">{t.details.exportSchemaConfigurationTemplate}</h2>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              将设计完成的字段规则、取值范围、单位说明与参考配置样例整体打包为标准化 JSON
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">{t.details.packageFieldRulesRangesUnitsAndReference}</p>
           </div>
           <button
             onClick={onClose}
@@ -104,8 +102,7 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
               }`}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
-              完整 Schema 约束规范包 ({schemaPackage.fields.length} 个字段 ·{' '}
-              {schemaPackage.referenceExamples.length} 个样例)
+              {formatMessage(t.details.schemaPackage, { fields: schemaPackage.fields.length, profiles: schemaPackage.referenceExamples.length })}
             </button>
             <button
               onClick={() => setActiveTab('template')}
@@ -115,8 +112,7 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
                   : 'bg-slate-800 text-slate-300 hover:text-white'
               }`}
             >
-              <FileJson className="w-3.5 h-3.5" />
-              纯净默认配置 (config.default.{configFileExtension(outputFormat)})
+              <FileJson className="w-3.5 h-3.5" />{t.details.defaultConfigurationConfigDefault}{configFileExtension(outputFormat)})
             </button>
           </div>
 
@@ -127,7 +123,7 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
               className="px-3 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? '已复制' : activeTab === 'schema' ? '复制规范 JSON' : `复制 ${outputFormat.toUpperCase()}`}
+              {copied ? t.details.copied : activeTab === 'schema' ? t.details.copySchemaJson : formatMessage(t.details.copy2, { value0: outputFormat.toUpperCase() })}
             </button>
             <button
               onClick={handleDownload}
@@ -135,7 +131,7 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
               className="px-3.5 py-1.5 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg flex items-center gap-1.5 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download className="w-3.5 h-3.5" />
-              {activeTab === 'schema' ? '下载规范 JSON' : `下载 ${outputFormat.toUpperCase()} 配置`}
+              {activeTab === 'schema' ? t.details.downloadSchemaJson : formatMessage(t.details.downloadConfiguration, { value0: outputFormat.toUpperCase() })}
             </button>
           </div>
         </div>
@@ -149,15 +145,12 @@ export const SchemaExportModal: React.FC<SchemaExportModalProps> = ({
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-800 bg-slate-900/90 text-xs text-slate-400">
-          <span>
-            文件大小: {(new Blob([activeContent]).size / 1024).toFixed(1)} KB · 格式: {activeTab === 'schema' ? 'Schema JSON' : outputFormat.toUpperCase()}
+          <span>{formatMessage(t.details.fileSize, { size: (new Blob([activeContent]).size / 1024).toFixed(1), format: activeTab === 'schema' ? 'Schema JSON' : outputFormat.toUpperCase() })}
           </span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-          >
-            完成并关闭
-          </button>
+          >{t.details.doneClose}</button>
         </div>
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import { useState, type Dispatch, type SetStateAction } from 'react';
 import { EnumOption, FieldDefinition, FieldType } from '../../types/config';
 
@@ -5,6 +6,7 @@ export function useArrayObjectFieldEditor(
   formData: FieldDefinition,
   setFormData: Dispatch<SetStateAction<FieldDefinition>>
 ) {
+  const { t, format: formatMessage } = useI18n();
   const [newSubKey, setNewSubKey] = useState('');
   const [newSubLabel, setNewSubLabel] = useState('');
   const [newSubType, setNewSubType] = useState<FieldType>('string');
@@ -22,7 +24,7 @@ export function useArrayObjectFieldEditor(
       key: newSubKey.trim(),
       path: newSubKey.trim(),
       label: newSubLabel.trim() || newSubKey.trim(),
-      description: `子项字段 ${newSubKey.trim()}`,
+      description: formatMessage(t.details.subField, { value0: newSubKey.trim() }),
       category: formData.category,
       type: newSubType,
       required: false,
@@ -88,7 +90,7 @@ export function useArrayObjectFieldEditor(
     const options: EnumOption[] = items.map((value) => ({
       value,
       label: value,
-      description: `可选值: ${value}`,
+      description: formatMessage(t.details.optionValue, { value0: value }),
     }));
     handleUpdateSubField(subIndex, {
       constraints: {

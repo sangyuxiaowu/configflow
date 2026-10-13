@@ -19,7 +19,7 @@ import { ConfigPreviewPanel, type ConfigPreviewResult } from './ConfigPreviewPan
 import { resolveSchemaPackageFromJson } from '../../utils/schemaInfer';
 import { fetchRemoteJson } from '../../utils/remoteConfig';
 import { ConfigSchemaPackage, FieldDefinition, ConfigCategory } from '../../types/config';
-import { PRESET_SCHEMA_SNIPPETS } from '../../data/configLoadPresets';
+import { getPresetSchemaSnippets } from '../../data/configLoadPresets';
 import { useI18n } from '../../i18n';
 
 export interface ConfigLoadResult {
@@ -51,7 +51,8 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
   initialTab = 'upload',
   initialUrl = '',
 }) => {
-  const { t, format, language } = useI18n();
+  const { t, language, format: formatMessage } = useI18n();
+  const presetSchemas = getPresetSchemaSnippets(language);
   const [activeTab, setActiveTab] = useState<'upload' | 'paste' | 'remote'>(initialTab);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -113,19 +114,19 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
     try {
       const parsed = JSON.parse(text);
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-        setParseError('文件根节点必须是标准的 JSON Object，不能是顶层数组或普通标量');
+        setParseError(t.details.theRootMustBeAJsonObject);
         setResolvedResult(null);
         return;
       }
 
-      const res = resolveSchemaPackageFromJson(parsed, fallbackName, srcUrl);
+      const res = resolveSchemaPackageFromJson(parsed, fallbackName, srcUrl, language);
       setResolvedResult(res);
       setParseError(null);
       setSourceType(source);
       setConfigName(res.schemaPackage.name);
       setConfigDesc(res.schemaPackage.description);
     } catch (err: any) {
-      setParseError(`JSON 语法解析错误: ${err.message}`);
+      setParseError(formatMessage(t.details.jsonSyntaxError, { value0: err.message }));
       setResolvedResult(null);
     }
   };
@@ -145,10 +146,10 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
     reader.onload = (event) => {
       const content = event.target?.result as string;
       const baseName = file.name.replace(/\.[^/.]+$/, '');
-      handleParseJsonString(content, `${baseName} 约束规范`, 'file');
+      handleParseJsonString(content, formatMessage(t.details.schema, { value0: baseName }), 'file');
     };
     reader.onerror = () => {
-      setParseError('读取本地文件失败，请检查文件权限');
+      setParseError(t.details.unableToReadTheLocalFileCheck);
       setResolvedResult(null);
     };
     reader.readAsText(file);
@@ -176,7 +177,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
   // Paste handlers
   const handlePasteChange = (val: string) => {
     setJsonText(val);
-    handleParseJsonString(val, '粘贴的配置约束规范', 'paste');
+    handleParseJsonString(val, t.details.pastedConfigurationSchema, 'paste');
   };
 
   const handlePasteFromClipboard = async () => {
@@ -184,10 +185,10 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
       const text = await navigator.clipboard.readText();
       if (text) {
         setJsonText(text);
-        handleParseJsonString(text, '剪贴板约束规范', 'paste');
+        handleParseJsonString(text, t.details.clipboardSchema, 'paste');
       }
     } catch {
-      setParseError('无法访问剪贴板，请使用快捷键 Ctrl+V / Cmd+V 直接粘贴到文本框中');
+      setParseError(t.details.unableToAccessTheClipboardPasteInto);
     }
   };
 
@@ -198,11 +199,11 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
       setJsonText(JSON.stringify(parsed, null, 2));
       setParseError(null);
     } catch (err: any) {
-      setParseError(`无法格式化，JSON 语法有误: ${err.message}`);
+      setParseError(formatMessage(t.details.unableToFormatInvalidJson, { value0: err.message }));
     }
   };
 
-  const handleApplyPreset = (snippet: typeof PRESET_SCHEMA_SNIPPETS[0]) => {
+  const handleApplyPreset = (snippet: typeof presetSchemas[number]) => {
     const formatted = JSON.stringify(snippet.package, null, 2);
     setJsonText(formatted);
     handleParseJsonString(formatted, snippet.name, 'paste');
@@ -212,12 +213,12 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
   const handleFetchRemote = async (targetUrl?: string) => {
     const url = (targetUrl || remoteUrl).trim();
     if (!url) {
-      setFetchError('请输入有效的远程约束规范 URL 地址');
+      setFetchError(t.details.enterAValidRemoteSchemaUrl);
       return;
     }
 
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      setFetchError('URL 必须以 http:// 或 https:// 开头');
+      setFetchError(t.details.theUrlMustStartWithHttpOr);
       return;
     }
 
@@ -228,14 +229,14 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
       const data = await fetchRemoteJson(url, 8000);
 
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-        throw new Error('远程返回的内容不是标准的 JSON 键值对对象');
+        throw new Error(t.details.theRemoteResponseMustBeAJson);
       }
 
       setLastFetchedUrl(url);
-      const urlFileName = url.split('/').pop()?.replace(/\.json$/i, '') || '远程规范';
-      const autoName = `${urlFileName.charAt(0).toUpperCase() + urlFileName.slice(1)} 约束规范`;
+      const urlFileName = url.split('/').pop()?.replace(/\.json$/i, '') || t.details.remoteSchema;
+      const autoName = formatMessage(t.details.schema, { value0: urlFileName.charAt(0).toUpperCase() + urlFileName.slice(1) });
 
-      const res = resolveSchemaPackageFromJson(data, autoName, url);
+      const res = resolveSchemaPackageFromJson(data, autoName, url, language);
       setResolvedResult(res);
       setParseError(null);
       setSourceType('remote');
@@ -243,7 +244,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
       setConfigDesc(res.schemaPackage.description);
     } catch (err: any) {
       setFetchError(
-        `拉取失败: ${err.message || '网络连接超时或跨域被阻止 (CORS)'}。您可以将目标链接在浏览器新窗口打开，并将 JSON 复制到「直接粘贴」标签中。`
+        formatMessage(t.details.fetchFailedOpenTheUrlInA, { value0: err.message || t.details.theConnectionTimedOutOrCrossOrigin })
       );
       setResolvedResult(null);
     } finally {
@@ -386,17 +387,13 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                 <div className="w-14 h-14 rounded-2xl bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center mx-auto mb-3 text-indigo-400">
                   <Upload className="w-7 h-7" />
                 </div>
-                <h3 className="text-sm font-semibold text-white">
-                  点击浏览本地文件 或 将开发交付的 .json 约束文件拖入此处
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  支持开发导出的标准 Schema 规范包（包含字段安全规则、取值范围、单位说明与参考基线）
-                </p>
+                <h3 className="text-sm font-semibold text-white">{t.details.browseLocalFilesOrDropADeveloper}</h3>
+                <p className="text-xs text-slate-400 mt-1">{t.details.supportsStandardSchemaPackagesWithSafetyRules}</p>
 
                 {uploadedFile && (
                   <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 text-xs">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>已选文件：{uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)</span>
+                    <span>{t.details.selectedFile}{uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(1)} KB)</span>
                   </div>
                 )}
               </div>
@@ -408,11 +405,9 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
             <div className="space-y-3">
               {/* Presets row */}
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">
-                  快速载入官方标准开发约束规范示例：
-                </label>
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">{t.details.builtInDeveloperSchemaExamples}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {PRESET_SCHEMA_SNIPPETS.map((snippet) => (
+                  {presetSchemas.map((snippet) => (
                     <button
                       key={snippet.name}
                       type="button"
@@ -433,9 +428,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
 
               {/* Textarea toolbar */}
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-300 font-medium">
-                  粘贴开发交付的约束规范 JSON 内容：
-                </span>
+                <span className="text-slate-300 font-medium">{t.details.pasteTheDeveloperSchemaJson}</span>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
@@ -443,7 +436,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                     className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-1"
                   >
                     <Copy className="w-3 h-3" />
-                    <span>剪贴板粘贴</span>
+                    <span>{t.details.pasteFromClipboard}</span>
                   </button>
                   <button
                     type="button"
@@ -451,7 +444,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                     className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-1"
                   >
                     <FileCode className="w-3 h-3" />
-                    <span>格式化</span>
+                    <span>{t.details.format}</span>
                   </button>
                   {jsonText && (
                     <button
@@ -462,9 +455,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                         setParseError(null);
                       }}
                       className="px-2 py-1 rounded-md text-slate-400 hover:text-rose-400 transition-colors"
-                    >
-                      清空
-                    </button>
+                    >{t.details.clear}</button>
                   )}
                 </div>
               </div>
@@ -474,7 +465,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                 value={jsonText}
                 onChange={(e) => handlePasteChange(e.target.value)}
                 className="w-full p-3.5 text-xs font-mono bg-slate-950 border border-slate-800 rounded-xl text-slate-200 focus:outline-hidden focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none leading-relaxed"
-                placeholder='{\n  "id": "pkg-service-spec",\n  "name": "微服务约束规范",\n  "fields": [ ... ]\n}'
+                placeholder={t.details.nIdPkgServiceSpecNName}
                 spellCheck={false}
               />
             </div>
@@ -484,9 +475,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
           {activeTab === 'remote' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">
-                  输入开发团队或发布中心提供的远程约束规范 (.json) 地址：
-                </label>
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">{t.details.enterTheRemoteSchemaJsonUrlProvided}</label>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <div className="relative flex-1">
                     <Globe className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -514,12 +503,12 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                     {isFetchingRemote ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>正在拉取...</span>
+                        <span>{t.details.fetching}</span>
                       </>
                     ) : (
                       <>
                         <Globe className="w-3.5 h-3.5" />
-                        <span>拉取约束规范</span>
+                        <span>{t.details.fetchSchema}</span>
                       </>
                     )}
                   </button>
@@ -531,7 +520,7 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-slate-200 font-medium">
                     <ExternalLink className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>第三方应用无头嵌入能力 (?load=...)</span>
+                    <span>{t.details.embeddedIntegrationLoad}</span>
                   </div>
                   {remoteUrl.trim() && (
                     <button
@@ -542,33 +531,29 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
                       {copiedShareLink ? (
                         <>
                           <Check className="w-3 h-3 text-emerald-400" />
-                          <span>已复制嵌入链接</span>
+                          <span>{t.details.embedLinkCopied}</span>
                         </>
                       ) : (
                         <>
                           <Copy className="w-3 h-3" />
-                          <span>复制嵌入 URL</span>
+                          <span>{t.details.copyEmbedUrl}</span>
                         </>
                       )}
                     </button>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 leading-relaxed">
-                  其他系统或工作流平台（如运维发布系统、CMDB）可以通过读取实际运行地址直接嵌入：
-                </p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">{t.details.otherSystemsAndWorkflowPlatformsSuchAs}</p>
                 <div className="p-2 rounded bg-slate-900 border border-slate-800 text-[11px] font-mono text-indigo-300 break-all select-all">
-                  {displayAppBaseUrl}?load={remoteUrl.trim() ? encodeURIComponent(remoteUrl.trim()) : '<远程约束文件.json地址>'}
+                  {displayAppBaseUrl}?load={remoteUrl.trim() ? encodeURIComponent(remoteUrl.trim()) : t.details.remoteSchemaJsonUrl}
                 </div>
-                <p className="text-[11px] text-slate-500">
-                  嵌入方式加载后，将不展示 Header 和 Footer，仅有纯净的可视化配置生成与合规校验能力。
-                </p>
+                <p className="text-[11px] text-slate-500">{t.details.embeddedModeHidesTheHeaderAndFooter}</p>
               </div>
 
               {fetchError && (
                 <div className="flex items-start gap-2.5 p-3.5 text-xs text-rose-300 bg-rose-950/40 border border-rose-800/50 rounded-xl">
                   <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                   <div className="space-y-1">
-                    <p className="font-medium">远程约束文件拉取未成功</p>
+                    <p className="font-medium">{t.details.remoteSchemaFetchFailed}</p>
                     <p className="text-slate-300/90 leading-relaxed">{fetchError}</p>
                   </div>
                 </div>
@@ -597,12 +582,8 @@ export const ConfigLoadModal: React.FC<ConfigLoadModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/95">
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
             <Info className="w-4 h-4 text-slate-500 shrink-0" />
-            <span className="hidden sm:inline">
-              规范交付给运维后，运维可在表单中安全合规填写参数，并一键审查导出生产配置
-            </span>
-            <span className="sm:hidden">
-              合规校验与安全配置保障
-            </span>
+            <span className="hidden sm:inline">{t.details.deliveredSchemasLetOperatorsEditValidatedParameters}</span>
+            <span className="sm:hidden">{t.details.validationConfigurationSafety}</span>
           </div>
 
           <div className="flex items-center gap-3">

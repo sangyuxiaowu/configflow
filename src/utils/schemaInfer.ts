@@ -1,4 +1,5 @@
 import { ConfigCategory, FieldDefinition, FieldType, ConfigSchemaPackage } from '../types/config';
+import type { Language } from '../i18n/types';
 
 // 常见通用计算机与系统运维键名翻译字典
 const COMMON_KEY_LABELS: Record<string, { label: string; desc: string; category?: string; unit?: string }> = {
@@ -22,12 +23,33 @@ const COMMON_KEY_LABELS: Record<string, { label: string; desc: string; category?
   token: { label: '访问令牌 Token', desc: 'API 接口鉴权凭证', category: '安全防护' },
 };
 
+const COMMON_KEY_LABELS_EN: typeof COMMON_KEY_LABELS = {
+  port: { label: 'Listening / Communication Port', desc: 'Network communication port (1024-65535)', category: 'Networking', unit: 'Port' },
+  host: { label: 'Hostname / Listening IP', desc: 'Network interface or IP binding address', category: 'Networking' },
+  env: { label: 'Deployment Environment', desc: 'Environment identifier (prod/staging/dev)', category: 'General' },
+  name: { label: 'Name / Identifier', desc: 'Unique identifier', category: 'General' },
+  version: { label: 'Version', desc: 'Semantic release version', category: 'General' },
+  timeout: { label: 'Timeout', desc: 'Timeout threshold for requests or operations', category: 'Performance & Timeouts', unit: 'ms' },
+  timeoutms: { label: 'Timeout (Milliseconds)', desc: 'Timeout duration', category: 'Performance & Timeouts', unit: 'ms' },
+  timeoutseconds: { label: 'Timeout (Seconds)', desc: 'Timeout duration in seconds', category: 'Performance & Timeouts', unit: 's' },
+  maxconnections: { label: 'Maximum Connections', desc: 'Connection pool or concurrency limit', category: 'Connection Pool', unit: 'connections' },
+  minconnections: { label: 'Minimum Idle Connections', desc: 'Persistent connections in the pool', category: 'Connection Pool', unit: 'connections' },
+  workers: { label: 'Worker Count', desc: 'Number of concurrent workers', category: 'Performance & Concurrency', unit: 'cores' },
+  concurrency: { label: 'Concurrency', desc: 'Concurrent task throughput', category: 'Performance & Concurrency', unit: 'items/s' },
+  loglevel: { label: 'Log Level', desc: 'Log verbosity filter', category: 'Logging & Monitoring' },
+  enabletls: { label: 'Enable TLS', desc: 'Require encrypted transport', category: 'Security' },
+  ssl: { label: 'SSL / TLS Settings', desc: 'Transport encryption settings', category: 'Security' },
+  password: { label: 'Authentication Password', desc: 'System access password', category: 'Security' },
+  secret: { label: 'Secret Key', desc: 'Signing or encryption key', category: 'Security' },
+  token: { label: 'Access Token', desc: 'API authentication credential', category: 'Security' },
+};
+
 /**
  * 转换 camelCase / PascalCase / snake_case 为友好显示名称
  */
-export function formatKeyToLabel(key: string): string {
+export function formatKeyToLabel(key: string, language: Language = 'zh'): string {
   const lower = key.toLowerCase();
-  for (const [k, v] of Object.entries(COMMON_KEY_LABELS)) {
+  for (const [k, v] of Object.entries(language === 'en' ? COMMON_KEY_LABELS_EN : COMMON_KEY_LABELS)) {
     if (lower === k || lower.endsWith(k)) {
       return v.label;
     }
@@ -44,33 +66,33 @@ export function formatKeyToLabel(key: string): string {
 /**
  * 自动推断所属分组
  */
-export function inferCategory(key: string, path: string): string {
+export function inferCategory(key: string, path: string, language: Language = 'zh'): string {
   const lower = (key + '.' + path).toLowerCase();
   const rootPart = path.split('.')[0] || '';
 
   if (lower.includes('db') || lower.includes('database') || lower.includes('mysql') || lower.includes('postgres') || lower.includes('sql') || lower.includes('mongo')) {
-    return '数据库与存储';
+    return language === 'en' ? 'Databases & Storage' : '数据库与存储';
   }
   if (lower.includes('redis') || lower.includes('cache') || lower.includes('memcached')) {
-    return '缓存与内存';
+    return language === 'en' ? 'Cache & Memory' : '缓存与内存';
   }
   if (lower.includes('log') || lower.includes('trace') || lower.includes('monitor') || lower.includes('metric') || lower.includes('probe')) {
-    return '日志与监控探测';
+    return language === 'en' ? 'Logging & Monitoring' : '日志与监控探测';
   }
   if (lower.includes('security') || lower.includes('auth') || lower.includes('ssl') || lower.includes('tls') || lower.includes('cors') || lower.includes('secret') || lower.includes('password') || lower.includes('token')) {
-    return '安全策略与认证';
+    return language === 'en' ? 'Security & Authentication' : '安全策略与认证';
   }
   if (lower.includes('server') || lower.includes('http') || lower.includes('port') || lower.includes('host') || lower.includes('network') || lower.includes('gateway')) {
-    return '基础网络与网关';
+    return language === 'en' ? 'Networking & Gateways' : '基础网络与网关';
   }
   if (lower.includes('queue') || lower.includes('mq') || lower.includes('kafka') || lower.includes('rabbit') || lower.includes('worker')) {
-    return '消息与工作队列';
+    return language === 'en' ? 'Messaging & Work Queues' : '消息与工作队列';
   }
 
   if (rootPart) {
-    return formatKeyToLabel(rootPart);
+    return formatKeyToLabel(rootPart, language);
   }
-  return '核心业务配置';
+  return language === 'en' ? 'Core Settings' : '核心业务配置';
 }
 
 /**
@@ -122,7 +144,8 @@ export function inferFieldType(key: string, value: any): FieldType {
 export function inferItemFieldsFromArray(
   items: Array<Record<string, any>>,
   parentPath: string,
-  parentCategory: string
+  parentCategory: string,
+  language: Language = 'zh'
 ): { itemFields: FieldDefinition[]; itemTitleKey: string } {
   const allKeys = new Set<string>();
   const keyFrequency: Record<string, number> = {};
@@ -158,7 +181,7 @@ export function inferItemFieldsFromArray(
     const values = keyValues[key] || [];
     const sampleVal = values.find(v => v !== undefined && v !== null) ?? '';
     const type = inferFieldType(key, sampleVal);
-    const keyInfo = COMMON_KEY_LABELS[key.toLowerCase()] || {};
+    const keyInfo = (language === 'en' ? COMMON_KEY_LABELS_EN : COMMON_KEY_LABELS)[key.toLowerCase()] || {};
     const isRequired = keyFrequency[key] === items.length;
     const isPort = type === 'port' || key.toLowerCase().includes('port');
     const isIp = type === 'ip' || key.toLowerCase() === 'host';
@@ -171,7 +194,7 @@ export function inferItemFieldsFromArray(
         enumOptions = distinctVals.map(val => ({
           value: val,
           label: val,
-          description: `选项值: ${val}`
+          description: language === 'en' ? `Option value: ${val}` : `选项值: ${val}`
         }));
       }
     }
@@ -180,8 +203,8 @@ export function inferItemFieldsFromArray(
       id: `${parentPath}_item_${key}`,
       key,
       path: key,
-      label: keyInfo.label || formatKeyToLabel(key),
-      description: keyInfo.desc || `配置项「${key}」`,
+      label: keyInfo.label || formatKeyToLabel(key, language),
+      description: keyInfo.desc || (language === 'en' ? `Configuration field "${key}"` : `配置项「${key}」`),
       category: parentCategory,
       type: isPort ? 'port' : (isIp ? 'ip' : (enumOptions ? 'enum' : type)),
       required: isRequired,
@@ -190,7 +213,7 @@ export function inferItemFieldsFromArray(
       isSensitive: key.toLowerCase().includes('pass') || key.toLowerCase().includes('secret'),
       requiresRestart: false,
       constraints: {
-        unit: keyInfo.unit || (typeof sampleVal === 'number' && key.toLowerCase().includes('second') ? '秒' : undefined),
+        unit: keyInfo.unit || (typeof sampleVal === 'number' && key.toLowerCase().includes('second') ? (language === 'en' ? 's' : '秒') : undefined),
         min: typeof sampleVal === 'number' ? (isPort ? 1 : 0) : undefined,
         max: typeof sampleVal === 'number' ? (isPort ? 65535 : undefined) : undefined,
         options: enumOptions
@@ -205,7 +228,8 @@ export function inferItemFieldsFromArray(
  * 从原始 JSON 对象递归解析出字段定义树，通用展开所有层级
  */
 export function inferSchemaFromJson(
-  rawJson: Record<string, any>
+  rawJson: Record<string, any>,
+  language: Language = 'zh'
 ): { fields: FieldDefinition[]; categories: ConfigCategory[] } {
   const fields: FieldDefinition[] = [];
   const categorySet = new Set<string>();
@@ -214,8 +238,8 @@ export function inferSchemaFromJson(
     for (const [key, val] of Object.entries(obj)) {
       const fullPath = currentPath ? `${currentPath}.${key}` : key;
       const type = inferFieldType(key, val);
-      const keyInfo = COMMON_KEY_LABELS[key.toLowerCase()] || {};
-      const category = parentCategory || keyInfo.category || inferCategory(key, fullPath);
+      const keyInfo = (language === 'en' ? COMMON_KEY_LABELS_EN : COMMON_KEY_LABELS)[key.toLowerCase()] || {};
+      const category = parentCategory || keyInfo.category || inferCategory(key, fullPath, language);
       categorySet.add(category);
 
       // 如果是纯嵌套 Object (不是数组)，继续深入递归
@@ -226,14 +250,14 @@ export function inferSchemaFromJson(
 
       // 如果是对象数组 (例如 Services, Nodes, Clusters)
       if (type === 'array_object' && Array.isArray(val)) {
-        const { itemFields, itemTitleKey } = inferItemFieldsFromArray(val, fullPath.replace(/\./g, '_'), category);
+        const { itemFields, itemTitleKey } = inferItemFieldsFromArray(val, fullPath.replace(/\./g, '_'), category, language);
 
         const arrayField: FieldDefinition = {
           id: fullPath.replace(/\./g, '_'),
           key,
           path: fullPath,
-          label: keyInfo.label || formatKeyToLabel(key),
-          description: keyInfo.desc || `配置列表「${key}」，包含多个子对象`,
+          label: keyInfo.label || formatKeyToLabel(key, language),
+          description: keyInfo.desc || (language === 'en' ? `Configuration list "${key}" containing multiple objects` : `配置列表「${key}」，包含多个子对象`),
           category,
           type: 'array_object',
           required: true,
@@ -261,8 +285,8 @@ export function inferSchemaFromJson(
         id: fullPath.replace(/\./g, '_'),
         key,
         path: fullPath,
-        label: keyInfo.label || formatKeyToLabel(key),
-        description: keyInfo.desc || `配置项 ${key}，初值: ${JSON.stringify(val)}`,
+        label: keyInfo.label || formatKeyToLabel(key, language),
+        description: keyInfo.desc || (language === 'en' ? `Configuration field ${key}, initial value: ${JSON.stringify(val)}` : `配置项 ${key}，初值: ${JSON.stringify(val)}`),
         category,
         type: isPort ? 'port' : type,
         required: true,
@@ -271,7 +295,7 @@ export function inferSchemaFromJson(
         isDangerous,
         requiresRestart: ['port', 'host'].includes(key.toLowerCase()),
         constraints: {
-          unit: keyInfo.unit || (typeof val === 'number' && key.toLowerCase().includes('second') ? '秒' : typeof val === 'number' && key.toLowerCase().includes('ms') ? 'ms' : undefined),
+          unit: keyInfo.unit || (typeof val === 'number' && key.toLowerCase().includes('second') ? (language === 'en' ? 's' : '秒') : typeof val === 'number' && key.toLowerCase().includes('ms') ? 'ms' : undefined),
           min: typeof val === 'number' ? (isPort ? 1 : 0) : undefined,
           max: typeof val === 'number' ? (isPort ? 65535 : undefined) : undefined,
           step: typeof val === 'number' ? 1 : undefined,
@@ -290,7 +314,7 @@ export function inferSchemaFromJson(
   const categories: ConfigCategory[] = Array.from(categorySet).map(c => ({
     id: c,
     name: c,
-    description: `${c}相关系统配置项`
+    description: language === 'en' ? `System configuration for ${c}` : `${c}相关系统配置项`
   }));
 
   return { fields, categories };
@@ -424,7 +448,8 @@ export function flattenFields(fields: FieldDefinition[]): FieldDefinition[] {
 export function resolveSchemaPackageFromJson(
   parsedJson: any,
   fallbackName?: string,
-  sourceUrl?: string
+  sourceUrl?: string,
+  language: Language = 'zh'
 ): {
   schemaPackage: ConfigSchemaPackage;
   isStandardSchema: boolean;
@@ -466,12 +491,14 @@ export function resolveSchemaPackageFromJson(
 
     const schemaPackage: ConfigSchemaPackage = {
       id: parsedJson.id || `pkg-${Date.now()}`,
-      name: parsedJson.name || fallbackName || '开发交付配置约束规范',
+      name: parsedJson.name || fallbackName || (language === 'en' ? 'Developer Configuration Schema' : '开发交付配置约束规范'),
       version: parsedJson.version || '1.0.0',
       description:
         parsedJson.description ||
-        (sourceUrl ? `从远程地址加载的约束规范: ${sourceUrl}` : '开发团队交付的配置规则与约束基线'),
-      author: parsedJson.author || '系统开发团队',
+        (sourceUrl
+          ? (language === 'en' ? `Schema loaded from: ${sourceUrl}` : `从远程地址加载的约束规范: ${sourceUrl}`)
+          : (language === 'en' ? 'Developer configuration rules and baselines' : '开发团队交付的配置规则与约束基线')),
+      author: parsedJson.author || (language === 'en' ? 'Development Team' : '系统开发团队'),
       updatedAt: parsedJson.updatedAt || new Date().toISOString().split('T')[0],
       categories: rawCategories,
       fields,
@@ -489,26 +516,28 @@ export function resolveSchemaPackageFromJson(
   }
 
   // 2. 普通业务配置 JSON：自动逆向推断基础约束模型
-  const { fields, categories } = inferSchemaFromJson(parsedJson);
-  const autoName = fallbackName || '业务系统配置约束规范';
+  const { fields, categories } = inferSchemaFromJson(parsedJson, language);
+  const autoName = fallbackName || (language === 'en' ? 'Service Configuration Schema' : '业务系统配置约束规范');
   const autoPkg: ConfigSchemaPackage = {
     id: `pkg-${Date.now()}`,
     name: autoName,
     version: '1.0.0',
     description: sourceUrl
-      ? `从远程数据自动推断生成的约束规则: ${sourceUrl}`
-      : '从载入的数据中自动逆向识别的字段边界与约束规范',
-    author: '规范推断引擎',
+      ? (language === 'en' ? `Schema inferred from remote data: ${sourceUrl}` : `从远程数据自动推断生成的约束规则: ${sourceUrl}`)
+      : (language === 'en' ? 'Field boundaries and constraints inferred from imported configuration' : '从载入的数据中自动逆向识别的字段边界与约束规范'),
+    author: language === 'en' ? 'Schema Inference Engine' : '规范推断引擎',
     updatedAt: new Date().toISOString().split('T')[0],
     categories,
     fields,
     referenceExamples: [
       {
         id: `ref-orig-${Date.now()}`,
-        name: '初始基准版本',
+        name: language === 'en' ? 'Initial Baseline' : '初始基准版本',
         environment: 'production',
-        summary: '初次载入时的基准数据快照',
-        detailedNotes: sourceUrl ? `来源: ${sourceUrl}` : '由初始配置数据生成。',
+        summary: language === 'en' ? 'Configuration snapshot at initial import' : '初次载入时的基准数据快照',
+        detailedNotes: sourceUrl
+          ? (language === 'en' ? `Source: ${sourceUrl}` : `来源: ${sourceUrl}`)
+          : (language === 'en' ? 'Generated from initial configuration data.' : '由初始配置数据生成。'),
         config: parsedJson,
       },
     ],

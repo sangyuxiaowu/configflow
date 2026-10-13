@@ -30,15 +30,18 @@ const OpsVisualEditor = lazy(() =>
   }))
 );
 
-const WorkspaceLoading = () => (
+const WorkspaceLoading = () => {
+  const { t } = useI18n();
+  return (
   <div
     role="status"
-    aria-label="Loading workspace"
+    aria-label={t.common.loading}
     className="min-h-[30vh] flex items-center justify-center text-slate-400"
   >
     <RefreshCw className="w-5 h-5 animate-spin" />
   </div>
-);
+  );
+};
 
 /**
  * 提取 URL query 中的远程加载参数 (?load=https://xxx.json)
@@ -120,7 +123,7 @@ export function AppContent() {
           : `${capitalizedName} 约束规范`;
 
       const { schemaPackage: resolvedPkg, configData, isStandardSchema } =
-        resolveSchemaPackageFromJson(data, defaultSpecTitle, targetUrl);
+        resolveSchemaPackageFromJson(data, defaultSpecTitle, targetUrl, language);
 
       setSchemaPackage(resolvedPkg);
       setCurrentOpsConfig(configData);

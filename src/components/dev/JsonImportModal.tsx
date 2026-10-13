@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState, useRef } from 'react';
 import {
   X,
@@ -35,6 +36,12 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
   onClose,
   onImport,
 }) => {
+  const { t, language, format: formatMessage } = useI18n();
+  const rawPresets = PRESET_RAW_CONFIGS.map(preset => ({
+    ...preset,
+    name: language === 'en' ? preset.nameEn : preset.name,
+    desc: language === 'en' ? preset.descEn : preset.desc,
+  }));
   const [activeTab, setActiveTab] = useState<'upload' | 'paste' | 'remote'>('paste');
   const [configFormat, setConfigFormat] = useState<ConfigFormat>('json');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,9 +67,9 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
   const [parseError, setParseError] = useState<string | null>(null);
 
   // Schema metadata
-  const [schemaName, setSchemaName] = useState('分布式集群配置规范');
+  const [schemaName, setSchemaName] = useState(t.details.distributedClusterSchema);
   const [schemaDesc, setSchemaDesc] = useState(
-    '根据原始业务配置解析生成，定义节点集群、网络端口与故障转移约束'
+    t.details.generatedFromRawConfigurationToDefineCluster
   );
 
   if (!isOpen) return null;
@@ -83,7 +90,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
     try {
       const parsed = parseConfigText(text, format);
       if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-        setParseError('原始配置必须是顶层键值对对象，不能是数组或单一基础类型');
+        setParseError(t.details.theConfigurationMustBeATopLevel);
         setParsedRawJson(null);
         return;
       }
@@ -93,7 +100,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       if (defaultName) setSchemaName(defaultName);
       if (defaultDesc) setSchemaDesc(defaultDesc);
     } catch (err: any) {
-      setParseError(`${format.toUpperCase()} 语法解析错误: ${err.message}`);
+      setParseError(formatMessage(t.details.syntaxError, { value0: format.toUpperCase(), value1: err.message }));
       setParsedRawJson(null);
     }
   };
@@ -116,13 +123,13 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       setJsonText(content);
       handleParseString(
         content,
-        `${baseName} 约束规范`,
-        `从原始文件「${file.name}」解析，供定制字段规则`,
+        formatMessage(t.details.schema, { value0: baseName }),
+        formatMessage(t.details.parsedFromForFieldRuleCustomization, { value0: file.name }),
         format
       );
     };
     reader.onerror = () => {
-      setParseError('读取本地文件失败');
+      setParseError(t.details.unableToReadTheLocalFile);
       setParsedRawJson(null);
     };
     reader.readAsText(file);
@@ -162,10 +169,10 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         const format = detectConfigFormatFromContent(text);
         setConfigFormat(format);
         setJsonText(text);
-        handleParseString(text, '剪贴板配置规范', '从剪贴板粘贴的原始配置解析而来', format);
+        handleParseString(text, t.details.clipboardConfigurationSchema, t.details.generatedFromConfigurationPastedFromTheClipboard, format);
       }
     } catch {
-      setParseError('无法访问剪贴板，请使用 Ctrl+V / Cmd+V 直接粘贴');
+      setParseError(t.details.unableToAccessTheClipboardPasteUsing);
     }
   };
 
@@ -178,7 +185,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       setConfigFormat(format);
       setParseError(null);
     } catch (err: any) {
-      setParseError(`无法格式化，${format.toUpperCase()} 语法有误: ${err.message}`);
+      setParseError(formatMessage(t.details.unableToFormatInvalid, { value0: format.toUpperCase(), value1: err.message }));
     }
   };
 
@@ -186,11 +193,11 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
     const formatted = JSON.stringify(snippet.json, null, 2);
     setConfigFormat('json');
     setJsonText(formatted);
-    setSchemaName(snippet.name.split(' (')[0] + ' 约束规范');
+    setSchemaName(snippet.name.split(' (')[0] + t.details.schema2);
     setSchemaDesc(snippet.desc);
     handleParseString(
       formatted,
-      snippet.name.split(' (')[0] + ' 约束规范',
+      snippet.name.split(' (')[0] + t.details.schema2,
       snippet.desc,
       'json'
     );
@@ -200,7 +207,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
   const handleFetchRemote = async () => {
     const url = remoteUrl.trim();
     if (!url) {
-      setFetchError('请输入原始配置文件的 URL 地址');
+      setFetchError(t.details.enterTheRawConfigurationUrl);
       return;
     }
 
@@ -217,15 +224,15 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       );
 
       if (typeof data !== 'object' || data === null || Array.isArray(data)) {
-        throw new Error('远程返回的数据不是标准的键值对配置对象');
+        throw new Error(t.details.theRemoteConfigurationMustBeAnObject);
       }
 
       setConfigFormat(format);
       const formatted = stringifyConfig(data, format);
       setJsonText(formatted);
-      const urlFileName = url.split('/').pop()?.replace(/\.(json|ya?ml|properties|env)$/i, '') || '远程原始配置';
-      const autoName = `${urlFileName.charAt(0).toUpperCase() + urlFileName.slice(1)} 约束规范`;
-      const autoDesc = `从远程原始配置抓取: ${url}`;
+      const urlFileName = url.split('/').pop()?.replace(/\.(json|ya?ml|properties|env)$/i, '') || t.details.remoteConfiguration;
+      const autoName = formatMessage(t.details.schema, { value0: urlFileName.charAt(0).toUpperCase() + urlFileName.slice(1) });
+      const autoDesc = formatMessage(t.details.fetchedFromRemoteConfiguration, { value0: url });
 
       setParsedRawJson(data);
       setSchemaName(autoName);
@@ -233,7 +240,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
       setParseError(null);
     } catch (err: any) {
       setFetchError(
-        `拉取失败: ${err.message || '网络连接超时或跨域被阻止 (CORS)'}。您可以将配置内容直接复制到「直接粘贴」标签中。`
+        formatMessage(t.details.fetchFailedCopyTheConfigurationIntoThe, { value0: err.message || t.details.theConnectionTimedOutOrCrossOrigin })
       );
     } finally {
       setIsFetchingRemote(false);
@@ -245,14 +252,14 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
     if (!parsedRawJson) return;
 
     // 逆向解析原始业务配置 JSON，推断字段路径、嵌套层级与对象数组
-    const { fields, categories } = inferSchemaFromJson(parsedRawJson);
+    const { fields, categories } = inferSchemaFromJson(parsedRawJson, language);
 
     onImport({
       fields,
       categories,
       rawJson: parsedRawJson,
-      name: schemaName.trim() || '业务配置规范',
-      description: schemaDesc.trim() || '从原始配置自动解析生成',
+      name: schemaName.trim() || t.details.serviceConfigurationSchema,
+      description: schemaDesc.trim() || t.details.automaticallyGeneratedFromRawConfiguration,
     });
     onClose();
   };
@@ -268,11 +275,9 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           <div className="min-w-0">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
               <FileCode className="w-5 h-5 text-indigo-400 shrink-0" />
-              <span>提供原始全配置 · 自动构建规则模型</span>
+              <span>{t.details.importRawConfigurationGenerateSchema}</span>
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5 truncate">
-              开发端：提供生产或开发环境的原始全量业务配置，系统将自动逆向分析层级路径与对象数组，进入工作台定制字段规则与安全边界
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5 truncate">{t.details.importACompleteProductionOrDevelopmentConfiguration}</p>
           </div>
           <button
             onClick={onClose}
@@ -294,7 +299,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               }`}
             >
               <FileCode className="w-4 h-4 text-indigo-400" />
-              <span>直接粘贴原始配置</span>
+              <span>{t.details.pasteRawConfiguration}</span>
             </button>
 
             <button
@@ -306,7 +311,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               }`}
             >
               <Upload className="w-4 h-4 text-indigo-400" />
-              <span>本地上传配置文件</span>
+              <span>{t.details.uploadConfigurationFile}</span>
             </button>
 
             <button
@@ -318,7 +323,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               }`}
             >
               <Globe className="w-4 h-4 text-indigo-400" />
-              <span>远程 URL 获取原始配置</span>
+              <span>{t.details.fetchRemoteConfiguration}</span>
             </button>
           </div>
         </div>
@@ -329,11 +334,9 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           {activeTab === 'paste' && (
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">
-                  快速加载经典原始业务配置样例：
-                </label>
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">{t.details.rawConfigurationExamples}</label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  {PRESET_RAW_CONFIGS.map((snippet) => (
+                  {rawPresets.map((snippet) => (
                     <button
                       key={snippet.name}
                       type="button"
@@ -350,12 +353,10 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
               </div>
 
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-300 font-medium">
-                  粘贴业务系统原始配置内容：
-                </span>
+                <span className="text-slate-300 font-medium">{t.details.pasteRawConfiguration2}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] text-slate-400" aria-live="polite">
-                    {jsonText.trim() ? `已识别：${configFormat.toUpperCase()}` : '自动识别配置格式'}
+                    {jsonText.trim() ? formatMessage(t.details.detected, { value0: configFormat.toUpperCase() }) : t.details.detectConfigurationFormat}
                   </span>
                   <button
                     type="button"
@@ -363,7 +364,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                     className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-1"
                   >
                     <Copy className="w-3 h-3" />
-                    <span>剪贴板粘贴</span>
+                    <span>{t.details.pasteFromClipboard}</span>
                   </button>
                   <button
                     type="button"
@@ -371,7 +372,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                     className="px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors flex items-center gap-1"
                   >
                     <FileCode className="w-3 h-3" />
-                    <span>格式化</span>
+                    <span>{t.details.format}</span>
                   </button>
                 </div>
               </div>
@@ -412,17 +413,13 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                 <div className="w-14 h-14 rounded-2xl bg-indigo-950/60 border border-indigo-800/40 flex items-center justify-center mx-auto mb-3 text-indigo-400">
                   <Upload className="w-7 h-7" />
                 </div>
-                <h3 className="text-sm font-semibold text-white">
-                  点击浏览本地 JSON、YAML、Properties 或 ENV 配置文件
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">
-                  系统将以此文件作为初始基准配置，逆向推导所有字段路径并建立字段规则
-                </p>
+                <h3 className="text-sm font-semibold text-white">{t.details.browseLocalJsonYamlPropertiesOrEnv}</h3>
+                <p className="text-xs text-slate-400 mt-1">{t.details.theFileBecomesTheInitialBaselineFor}</p>
 
                 {uploadedFile && (
                   <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-950/60 border border-emerald-800/50 text-emerald-300 text-xs">
                     <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    <span>已选文件：{uploadedFile.name}</span>
+                    <span>{t.details.selectedFile}{uploadedFile.name}</span>
                   </div>
                 )}
               </div>
@@ -433,9 +430,7 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           {activeTab === 'remote' && (
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1.5">
-                  输入远程原始配置文件公开链接（按扩展名识别格式）：
-                </label>
+                <label className="text-xs font-medium text-slate-300 block mb-1.5">{t.details.enterAPublicConfigurationUrlFormatDetected}</label>
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                   <div className="relative flex-1">
                     <Globe className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -456,12 +451,12 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
                     {isFetchingRemote ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                        <span>拉取中...</span>
+                        <span>{t.details.fetching2}</span>
                       </>
                     ) : (
                       <>
                         <Globe className="w-3.5 h-3.5" />
-                        <span>抓取原始配置</span>
+                        <span>{t.details.fetchConfiguration}</span>
                       </>
                     )}
                   </button>
@@ -480,26 +475,22 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
           {/* Schema Metadata inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <div>
-              <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                欲生成的配置规范名称
-              </label>
+              <label className="text-[11px] font-medium text-slate-300 block mb-1">{t.details.generatedSchemaName}</label>
               <input
                 type="text"
                 value={schemaName}
                 onChange={(e) => setSchemaName(e.target.value)}
-                placeholder="例如：微服务核心运行约束规范"
+                placeholder={t.details.eGMicroserviceRuntimeSchema}
                 className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
               />
             </div>
             <div>
-              <label className="text-[11px] font-medium text-slate-300 block mb-1">
-                规范用途与适用系统说明
-              </label>
+              <label className="text-[11px] font-medium text-slate-300 block mb-1">{t.details.schemaPurposeScope}</label>
               <input
                 type="text"
                 value={schemaDesc}
                 onChange={(e) => setSchemaDesc(e.target.value)}
-                placeholder="简述该规范的约束范围"
+                placeholder={t.details.describeTheScopeOfThisSchema}
                 className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
               />
             </div>
@@ -510,11 +501,9 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
             <div className="p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-800/40 flex items-center justify-between text-xs">
               <div className="flex items-center gap-2 text-emerald-300">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                <span>原始配置解析合法 · 包含 {topKeysCount} 个根级业务对象</span>
+                <span>{formatMessage(t.details.configurationParsed, { count: topKeysCount })}</span>
               </div>
-              <span className="text-slate-400">
-                将进入开发设计台为每个字段制定规则
-              </span>
+              <span className="text-slate-400">{t.details.continueToTheDesignerToDefineField}</span>
             </div>
           )}
 
@@ -530,23 +519,21 @@ export const JsonImportModal: React.FC<JsonImportModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/95">
           <div className="text-xs text-slate-400 flex items-center gap-1.5">
             <Info className="w-4 h-4 text-slate-500 shrink-0" />
-            <span>自动逆向推断层级与列表模板，导入后即可在可视化卡片中配置范围约束与单位</span>
+            <span>{t.details.inferNestedPathsAndListTemplatesThen}</span>
           </div>
 
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
               className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              取消
-            </button>
+            >{t.details.cancel}</button>
             <button
               onClick={handleConfirm}
               disabled={!parsedRawJson}
               className="px-5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-800 disabled:text-slate-500 rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>解析并开始设计字段规则</span>
+              <span>{t.details.parseDesignFieldRules}</span>
             </button>
           </div>
         </div>

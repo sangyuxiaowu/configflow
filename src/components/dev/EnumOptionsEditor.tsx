@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState } from 'react';
 import { List, Plus, Trash2 } from 'lucide-react';
 import { EnumOption } from '../../types/config';
@@ -11,6 +12,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
   options,
   onChange,
 }) => {
+  const { t, format: formatMessage } = useI18n();
   const [newValue, setNewValue] = useState('');
   const [newLabel, setNewLabel] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -41,7 +43,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
       .map((value) => ({
         value,
         label: value,
-        description: `可选值: ${value}`,
+        description: formatMessage(t.details.optionValue, { value0: value }),
       }));
     onChange([...options, ...addedOptions]);
     setBatchText('');
@@ -59,59 +61,51 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-xs font-semibold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-            <List className="w-3.5 h-3.5 text-indigo-400" />
-            枚举候选值管理 (运维只能在这些选项中选择)
-          </h3>
-          <p className="text-[11px] text-slate-500 mt-0.5">
-            为每个选项提供明确的取值、中文名称和场景说明
-          </p>
+            <List className="w-3.5 h-3.5 text-indigo-400" />{t.details.enumOptionsOperatorsSelectFromTheseValues}</h3>
+          <p className="text-[11px] text-slate-500 mt-0.5">{t.details.provideAValueDisplayLabelAndUsage}</p>
         </div>
         <button
           type="button"
           onClick={() => setShowBatch(!showBatch)}
           className="text-xs text-indigo-400 hover:underline"
         >
-          {showBatch ? '单条添加' : '批量快捷导入'}
+          {showBatch ? t.details.addIndividually : t.details.batchImport}
         </button>
       </div>
 
       {showBatch && (
         <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
-          <label className="text-xs text-slate-300 block">
-            输入多个选项（以逗号或换行分隔，如：round_robin, least_conn, ip_hash）
-          </label>
+          <label className="text-xs text-slate-300 block">{t.details.enterCommaSeparatedOrNewlineSeparatedOptions}</label>
           <textarea
             rows={3}
             value={batchText}
             onChange={(event) => setBatchText(event.target.value)}
-            placeholder="例如: dev, test, staging, prod"
+            placeholder={t.details.eGDevTestStagingProd}
             className="w-full px-3 py-2 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
           />
           <button
             type="button"
             onClick={handleBatchAdd}
             className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium"
-          >
-            确认批量添加
-          </button>
+          >{t.details.addBatch}</button>
         </div>
       )}
 
       <div className="p-3 bg-slate-950/60 border border-slate-800 rounded-xl space-y-2">
-        <span className="text-xs font-medium text-slate-300 block">添加新候选值：</span>
+        <span className="text-xs font-medium text-slate-300 block">{t.details.addAnOption}</span>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <input
             type="text"
             value={newValue}
             onChange={(event) => setNewValue(event.target.value)}
-            placeholder="* 选项实际值 (如 cluster)"
+            placeholder={t.details.optionValueEGCluster}
             className="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white font-mono"
           />
           <input
             type="text"
             value={newLabel}
             onChange={(event) => setNewLabel(event.target.value)}
-            placeholder="中文显示名 (如 分布式分片集群)"
+            placeholder={t.details.displayLabelEGShardedCluster}
             className="px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
           />
           <div className="flex gap-1.5">
@@ -119,7 +113,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
               type="text"
               value={newDescription}
               onChange={(event) => setNewDescription(event.target.value)}
-              placeholder="用途说明 (如 适用于生产高可用)"
+              placeholder={t.details.usageEGProductionHighAvailability}
               className="flex-1 px-2.5 py-1.5 text-xs bg-slate-900 border border-slate-700 rounded-lg text-white"
             />
             <button
@@ -127,9 +121,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
               onClick={handleAdd}
               className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium flex items-center gap-1 shrink-0"
             >
-              <Plus className="w-3.5 h-3.5" />
-              添加
-            </button>
+              <Plus className="w-3.5 h-3.5" />{t.details.add}</button>
           </div>
         </div>
       </div>
@@ -146,7 +138,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
                 value={String(option.value)}
                 onChange={(event) => handleUpdate(index, { value: event.target.value })}
                 className="w-full px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded font-mono text-indigo-300"
-                placeholder="值"
+                placeholder={t.details.value}
               />
             </div>
             <div className="md:col-span-4">
@@ -155,7 +147,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
                 value={option.label}
                 onChange={(event) => handleUpdate(index, { label: event.target.value })}
                 className="w-full px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded text-white"
-                placeholder="显示名"
+                placeholder={t.details.displayLabel}
               />
             </div>
             <div className="md:col-span-4">
@@ -164,7 +156,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
                 value={option.description || ''}
                 onChange={(event) => handleUpdate(index, { description: event.target.value })}
                 className="w-full px-2 py-1 text-xs bg-slate-900 border border-slate-700 rounded text-slate-300"
-                placeholder="说明"
+                placeholder={t.details.description}
               />
             </div>
             <div className="md:col-span-1 text-right">
@@ -172,7 +164,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
                 type="button"
                 onClick={() => onChange(options.filter((_, optionIndex) => optionIndex !== index))}
                 className="p-1 text-slate-500 hover:text-rose-400"
-                title="删除该选项"
+                title={t.details.deleteOption}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
@@ -180,9 +172,7 @@ export const EnumOptionsEditor: React.FC<EnumOptionsEditorProps> = ({
           </div>
         ))}
         {options.length === 0 && (
-          <div className="text-center py-6 text-xs text-rose-400 bg-rose-950/20 border border-rose-800/30 rounded-xl">
-            ⚠️ 当前尚未配置任何枚举选项，请在上方添加至少一个候选值
-          </div>
+          <div className="text-center py-6 text-xs text-rose-400 bg-rose-950/20 border border-rose-800/30 rounded-xl">{t.details.noEnumOptionsConfiguredAddAtLeast}</div>
         )}
       </div>
     </div>

@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React, { useState } from 'react';
 import {
   X,
@@ -28,6 +29,7 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
   onClose,
   onSave,
 }) => {
+  const { t, format: formatMessage } = useI18n();
   const [list, setList] = useState<ReferenceExample[]>(
     examples.map((item) => ({ ...item }))
   );
@@ -57,11 +59,11 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
   const handleAddNew = () => {
     const newItem: ReferenceExample = {
       id: `ref-${Date.now()}`,
-      name: `新增配置方案 ${list.length + 1}`,
+      name: formatMessage(t.details.newProfile, { value0: list.length + 1 }),
       environment: 'production',
-      summary: '请填写此方案适用的业务场景说明',
-      detailedNotes: '说明为何配置这些参数：\n1. 连接池大小与原因...\n2. 超时时间考量...',
-      recommendedHardware: '推荐 4C 8G 以上规格',
+      summary: t.details.describeTheIntendedUseOfThisProfile,
+      detailedNotes: t.details.explainTheseSettings1ConnectionPoolSizing,
+      recommendedHardware: t.details.recommendedAtLeast4CpuCoresAnd,
       config: JSON.parse(JSON.stringify(currentConfig || {})),
     };
     setList((prev) => [...prev, newItem]);
@@ -73,7 +75,7 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
     const copied: ReferenceExample = {
       ...JSON.parse(JSON.stringify(currentItem)),
       id: `ref-${Date.now()}`,
-      name: `${currentItem.name} (副本)`,
+      name: formatMessage(t.details.copy, { value0: currentItem.name }),
     };
     setList((prev) => [...prev, copied]);
     setSelectedIndex(list.length);
@@ -99,13 +101,9 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
           <div>
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-indigo-400" />
-              <h2 className="text-base font-semibold text-white">
-                配置样例库管理 (面向运维的参考基线)
-              </h2>
+              <h2 className="text-base font-semibold text-white">{t.details.referenceProfileLibrary}</h2>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              开发可以预设多套完整的推荐配置（如生产高可用、本地开发单机、压测集群），运维在编辑时可随时查阅并一键对齐
-            </p>
+            <p className="text-xs text-slate-400 mt-0.5">{t.details.defineRecommendedProductionDevelopmentAndLoadTesting}</p>
           </div>
           <button
             onClick={onClose}
@@ -120,17 +118,14 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
           {/* Left: Example List */}
           <div className="w-72 border-r border-slate-800 bg-slate-950/40 p-4 flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                预设方案 ({list.length})
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{formatMessage(t.details.profiles, { count: list.length })}
               </span>
               <button
                 type="button"
                 onClick={handleAddNew}
                 className="text-xs text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1 hover:underline"
               >
-                <Plus className="w-3.5 h-3.5" />
-                新增方案
-              </button>
+                <Plus className="w-3.5 h-3.5" />{t.details.addProfile}</button>
             </div>
 
             <div className="space-y-2 overflow-y-auto flex-1 pr-1">
@@ -151,7 +146,7 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold truncate flex-1">
-                        {item.name || '未命名样例'}
+                        {item.name || t.details.untitledProfile}
                       </span>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded uppercase font-medium ${
@@ -166,7 +161,7 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-400 truncate mt-1">
-                      {item.summary || '无场景描述'}
+                      {item.summary || t.details.noDescription}
                     </p>
                   </div>
                 );
@@ -182,7 +177,7 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
                   <span className="text-xs font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300">
                     ID: {currentItem.id}
                   </span>
-                  <span className="text-xs text-slate-400">正在编辑此方案说明与配置体</span>
+                  <span className="text-xs text-slate-400">{t.details.editingProfileDetailsAndConfiguration}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -190,18 +185,14 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
                     onClick={handleDuplicateCurrent}
                     className="px-2.5 py-1 text-xs font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg flex items-center gap-1 transition-colors"
                   >
-                    <Copy className="w-3.5 h-3.5" />
-                    克隆当前
-                  </button>
+                    <Copy className="w-3.5 h-3.5" />{t.details.cloneProfile}</button>
                   {list.length > 1 && (
                     <button
                       type="button"
                       onClick={() => handleRemove(selectedIndex)}
                       className="px-2.5 py-1 text-xs font-medium text-rose-400 bg-rose-950/30 hover:bg-rose-900/40 border border-rose-800/40 rounded-lg flex items-center gap-1 transition-colors"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      删除
-                    </button>
+                      <Trash2 className="w-3.5 h-3.5" />{t.details.delete}</button>
                   )}
                 </div>
               </div>
@@ -209,21 +200,17 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
               {/* Title & Env */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
-                    样例方案名称
-                  </label>
+                  <label className="text-xs font-medium text-slate-300 block mb-1">{t.details.profileName}</label>
                   <input
                     type="text"
                     value={currentItem.name}
                     onChange={(e) => handleUpdateCurrent({ name: e.target.value })}
                     className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
-                    placeholder="例如：生产高可用集群 (Prod HA 推荐)"
+                    placeholder={t.details.eGProductionHighAvailability}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
-                    目标部署环境
-                  </label>
+                  <label className="text-xs font-medium text-slate-300 block mb-1">{t.details.deploymentEnvironment}</label>
                   <select
                     value={currentItem.environment}
                     onChange={(e) =>
@@ -233,10 +220,10 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
                     }
                     className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
                   >
-                    <option value="production">生产环境 (Production)</option>
-                    <option value="staging">预发/灰度环境 (Staging)</option>
-                    <option value="development">开发调试环境 (Development)</option>
-                    <option value="testing">自动化测试环境 (Testing)</option>
+                    <option value="production">{t.details.production}</option>
+                    <option value="staging">{t.details.staging}</option>
+                    <option value="development">{t.details.development}</option>
+                    <option value="testing">{t.details.testing}</option>
                   </select>
                 </div>
               </div>
@@ -244,53 +231,45 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
               {/* Summary & Hardware */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
-                    适用场景简述 (一句话指导运维)
-                  </label>
+                  <label className="text-xs font-medium text-slate-300 block mb-1">{t.details.usageSummary}</label>
                   <input
                     type="text"
                     value={currentItem.summary}
                     onChange={(e) => handleUpdateCurrent({ summary: e.target.value })}
                     className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
-                    placeholder="如：核心机房线上容器集群，高并发容灾与严格安全隔离"
+                    placeholder={t.details.eGProductionContainersWithHighConcurrency}
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-slate-300 block mb-1">
-                    推荐硬件与容器规格
-                  </label>
+                  <label className="text-xs font-medium text-slate-300 block mb-1">{t.details.recommendedHardwareContainerResources}</label>
                   <input
                     type="text"
                     value={currentItem.recommendedHardware || ''}
                     onChange={(e) => handleUpdateCurrent({ recommendedHardware: e.target.value })}
                     className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
-                    placeholder="如：8C 16G 以上 / 至少 3 节点高可用部署"
+                    placeholder={t.details.eG8CpuCores16Gb}
                   />
                 </div>
               </div>
 
               {/* Detailed Notes */}
               <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
-                  架构说明与关键配置考量 (说明为什么这样配置，运维上线前必读)
-                </label>
+                <label className="text-xs font-medium text-slate-300 block mb-1">{t.details.architectureNotesConfigurationRationale}</label>
                 <textarea
                   rows={4}
                   value={currentItem.detailedNotes}
                   onChange={(e) => handleUpdateCurrent({ detailedNotes: e.target.value })}
                   className="w-full px-3 py-2 text-xs bg-slate-950 border border-slate-800 rounded-lg text-slate-200 focus:outline-hidden focus:border-indigo-500 resize-none font-sans leading-relaxed"
-                  placeholder="列出关键指标原因，如：连接池上限设为80是为了保证不打满MySQL，超时设为5000ms等..."
+                  placeholder={t.details.explainKeySettingsEG80Connections}
                 />
               </div>
 
               {/* JSON Editor for this example */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-medium text-slate-300">
-                    完整配置 JSON 体 (该样例对应的最终配置数据)
-                  </label>
+                  <label className="text-xs font-medium text-slate-300">{t.details.completeProfileConfigurationJson}</label>
                   {activeJsonError && (
-                    <span className="text-xs text-rose-400">JSON 语法错误: {activeJsonError}</span>
+                    <span className="text-xs text-rose-400">{t.details.jsonSyntaxError2}{activeJsonError}</span>
                   )}
                 </div>
                 <textarea
@@ -304,30 +283,22 @@ export const ReferenceExamplesEditor: React.FC<ReferenceExamplesEditorProps> = (
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">
-              请在左侧选择或新建一个参考样例
-            </div>
+            <div className="flex-1 flex items-center justify-center text-slate-500 text-xs">{t.details.selectOrCreateAReferenceProfile}</div>
           )}
         </div>
 
         {/* Footer */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-800 bg-slate-900/90">
-          <span className="text-xs text-slate-400">
-            已配置 {list.length} 个基线方案，运维端可随时调阅或一键采纳
-          </span>
+          <span className="text-xs text-slate-400">{formatMessage(t.details.profileAvailability, { count: list.length })}</span>
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
               className="px-4 py-2 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
-            >
-              取消
-            </button>
+            >{t.details.cancel}</button>
             <button
               onClick={handleSaveAll}
               className="px-5 py-2 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-lg transition-colors shadow-sm"
-            >
-              保存所有样例方案
-            </button>
+            >{t.details.saveAllProfiles}</button>
           </div>
         </div>
       </div>

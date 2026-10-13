@@ -35,7 +35,7 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
   referenceName,
 }) => {
   const { showToast } = useToast();
-  const { t, format, language } = useI18n();
+  const { t, language, format: formatMessage } = useI18n();
   const [showSecret, setShowSecret] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
 
@@ -101,7 +101,7 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
 
               {/* Quick port suggestions */}
               <div className="hidden sm:flex items-center gap-1 text-[11px] text-slate-400">
-                <span className="text-slate-500">常见端口:</span>
+                <span className="text-slate-500">{t.details.commonPorts}</span>
                 {[8080, 8000, 3000, 9001, 3306, 6379].map((p) => (
                   <button
                     key={p}
@@ -114,9 +114,7 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
                 ))}
               </div>
             </div>
-            <p className="text-[11px] text-slate-500">
-              有效端口区间: 1024 ~ 65535 (1024 以下为操作系统特权端口)
-            </p>
+            <p className="text-[11px] text-slate-500">{t.details.portRange102465535PortsBelow1024}</p>
           </div>
         );
       }
@@ -189,7 +187,7 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
               aria-checked={isChecked}
               onClick={() => {
                 if (isDangerous && !isChecked) {
-                  showToast(`提示：「${label}」为高危敏感策略，请注意线上影响`, 'info');
+                  showToast(formatMessage(t.details.warningIsACriticalPolicyConsiderIts, { value0: label }), 'info');
                 }
                 onChange(!isChecked);
               }}
@@ -216,7 +214,7 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
                   : 'text-slate-400'
               }`}
             >
-              {isChecked ? '已启用 (Enabled)' : '已关闭 (Disabled)'}
+              {isChecked ? t.details.enabled2 : t.details.disabled2}
             </span>
           </div>
         );
@@ -280,13 +278,13 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
                   ? 'border-rose-500 focus:border-rose-500'
                   : 'border-slate-800 focus:border-indigo-500'
               }`}
-              placeholder="请输入密码或密钥凭据..."
+              placeholder={t.details.enterAPasswordOrSecret}
             />
             <button
               type="button"
               onClick={() => setShowSecret(!showSecret)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-              title={showSecret ? '隐藏凭证' : '显示明文凭证'}
+              title={showSecret ? t.details.hideSecret : t.details.showSecret}
             >
               {showSecret ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -339,21 +337,17 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
                       handleAddTag();
                     }
                   }}
-                  placeholder="输入条目后按回车添加..."
+                  placeholder={t.details.enterAnItem}
                   className="w-full px-2 py-1 text-xs bg-transparent text-white placeholder-slate-500 focus:outline-hidden font-mono"
                 />
                 <button
                   type="button"
                   onClick={handleAddTag}
                   className="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md text-[11px] font-medium shrink-0"
-                >
-                  添加
-                </button>
+                >{t.details.add}</button>
               </div>
             </div>
-            <p className="text-[11px] text-slate-500">
-              已配置 {arrVal.length} 项 · 支持按回车快速添加多项
-            </p>
+            <p className="text-[11px] text-slate-500">{formatMessage(t.details.configuredItems, { count: arrVal.length })}</p>
           </div>
         );
       }
@@ -370,7 +364,7 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
                   ? 'border-rose-500 focus:border-rose-500'
                   : 'border-slate-800 focus:border-indigo-500'
               }`}
-              placeholder={field.placeholder || `例如: ${JSON.stringify(defaultValue)}`}
+              placeholder={field.placeholder || formatMessage(t.details.eG, { value0: JSON.stringify(defaultValue) })}
             />
           </div>
         );
@@ -474,7 +468,7 @@ export const OpsFieldRenderer: React.FC<OpsFieldRendererProps> = ({
           <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
           <span>
             {allErrors && allErrors.length > 1
-              ? `共发现 ${allErrors.length} 处规范校验错误，首个错误: ${effectiveError.message}`
+              ? formatMessage(t.details.validationErrorsFirstError, { value0: allErrors.length, value1: effectiveError.message })
               : effectiveError.message}
           </span>
         </div>

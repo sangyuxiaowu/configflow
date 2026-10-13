@@ -1,6 +1,7 @@
 import React from 'react';
 import { CheckCircle2, Package } from 'lucide-react';
 import { ConfigSchemaPackage } from '../../types/config';
+import { useI18n } from '../../i18n';
 
 export interface ConfigPreviewResult {
   schemaPackage: ConfigSchemaPackage;
@@ -23,6 +24,7 @@ export const ConfigPreviewPanel: React.FC<ConfigPreviewPanelProps> = ({
   onNameChange,
   onDescriptionChange,
 }) => {
+  const { t, format } = useI18n();
   if (!result) return null;
 
   return (
@@ -32,25 +34,22 @@ export const ConfigPreviewPanel: React.FC<ConfigPreviewPanelProps> = ({
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
           <span className="text-xs font-semibold text-emerald-300">
             {result.isStandardSchema
-              ? '✓ 标准开发约束规范包解析成功'
-              : '✓ 配置文件解析完成（已推断基础约束模型）'}
+              ? t.schemaLoadModal.standardParsed
+              : t.schemaLoadModal.inferredParsed}
           </span>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-slate-300">
           <span className="inline-flex items-center gap-1 font-mono">
-            <span className="text-slate-400">字段约束项:</span>
-            <strong className="text-white">{result.schemaPackage.fields.length} 个</strong>
+            <strong className="text-white">{format(t.schemaLoadModal.fieldCount, { count: result.schemaPackage.fields.length })}</strong>
           </span>
           <span>·</span>
           <span className="inline-flex items-center gap-1 font-mono">
-            <span className="text-slate-400">参考方案:</span>
-            <strong className="text-white">{result.schemaPackage.referenceExamples.length} 个</strong>
+            <strong className="text-white">{format(t.schemaLoadModal.profileCount, { count: result.schemaPackage.referenceExamples.length })}</strong>
           </span>
           <span>·</span>
           <span className="inline-flex items-center gap-1 font-mono">
-            <span className="text-slate-400">分类分组:</span>
-            <strong className="text-white">{result.schemaPackage.categories.length} 个</strong>
+            <strong className="text-white">{format(t.schemaLoadModal.categoryCount, { count: result.schemaPackage.categories.length })}</strong>
           </span>
         </div>
       </div>
@@ -58,25 +57,25 @@ export const ConfigPreviewPanel: React.FC<ConfigPreviewPanelProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label className="text-[11px] font-medium text-slate-300 block mb-1">
-            约束规范名称
+            {t.dev.schemaName}
           </label>
           <input
             type="text"
             value={name}
             onChange={(event) => onNameChange(event.target.value)}
-            placeholder="例如：微服务核心运行约束规范"
+            placeholder={t.schemaLoadModal.namePlaceholder}
             className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
           />
         </div>
         <div>
           <label className="text-[11px] font-medium text-slate-300 block mb-1">
-            适用范围与交付说明
+            {t.schemaLoadModal.descriptionLabel}
           </label>
           <input
             type="text"
             value={description}
             onChange={(event) => onDescriptionChange(event.target.value)}
-            placeholder="简述此约束规范适用的业务系统与环境"
+            placeholder={t.schemaLoadModal.descriptionPlaceholder}
             className="w-full px-3 py-1.5 text-xs bg-slate-950 border border-slate-800 rounded-lg text-white focus:outline-hidden focus:border-indigo-500"
           />
         </div>
@@ -84,7 +83,7 @@ export const ConfigPreviewPanel: React.FC<ConfigPreviewPanelProps> = ({
 
       <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
         <Package className="w-4 h-4 text-indigo-400 shrink-0" />
-        <span>载入后，运维端将严格依据此规范进行配置生成，内置实时校验防护与基线对照。</span>
+        <span>{t.schemaLoadModal.previewNotice}</span>
       </div>
     </div>
   );

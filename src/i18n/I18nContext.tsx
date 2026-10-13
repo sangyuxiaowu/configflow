@@ -70,6 +70,7 @@ export const I18nProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
+      document.title = (language === 'zh' ? zhLocale : enLocale).common.pageTitle;
     }
   }, [language]);
 

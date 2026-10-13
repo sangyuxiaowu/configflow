@@ -1,3 +1,4 @@
+import { useI18n } from '../../i18n';
 import React from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import { FieldDefinition, ValidationError } from '../../types/config';
@@ -18,7 +19,9 @@ export const ArrayObjectItemFields: React.FC<ArrayObjectItemFieldsProps> = ({
   itemFields,
   itemErrors,
   onUpdate,
-}) => (
+}) => {
+  const { t } = useI18n();
+  return (
   <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
     {itemFields.map((sub) => {
       const value = item[sub.key];
@@ -67,7 +70,7 @@ export const ArrayObjectItemFields: React.FC<ArrayObjectItemFieldsProps> = ({
                   }`}
                 />
               </button>
-              <span className="text-xs text-slate-400">{value ? '已启用' : '已停用'}</span>
+              <span className="text-xs text-slate-400">{value ? t.details.enabled : t.details.disabled}</span>
             </div>
           ) : sub.type === 'port' ? (
             <div>
@@ -147,7 +150,7 @@ export const ArrayObjectItemFields: React.FC<ArrayObjectItemFieldsProps> = ({
                 ))}
                 <input
                   type="text"
-                  placeholder="输入标签后按回车添加..."
+                  placeholder={t.details.enterATag}
                   onKeyDown={(event) => {
                     if (event.key !== 'Enter') return;
                     event.preventDefault();
@@ -182,4 +185,5 @@ export const ArrayObjectItemFields: React.FC<ArrayObjectItemFieldsProps> = ({
       );
     })}
   </div>
-);
+  );
+};
