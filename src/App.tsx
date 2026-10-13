@@ -345,7 +345,7 @@ export function AppContent() {
           <div className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center p-0.5 shadow-xs overflow-hidden shrink-0 group">
               <img
-                src="/icon.svg"
+                src="./icon.svg"
                 alt="OpsConfig Studio Logo"
                 className="w-full h-full rounded-md object-contain transition-transform group-hover:scale-105"
               />
