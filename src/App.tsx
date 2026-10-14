@@ -297,6 +297,9 @@ export function AppContent() {
           <div className="flex items-center gap-2">
             <img src="./icon.svg" alt="Logo" className="w-5 h-5 rounded" />
             <span className="text-xs font-bold text-white tracking-tight">OpsConfig Studio</span>
+            <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium text-indigo-300 bg-indigo-950/60 border border-indigo-800/50 rounded-md leading-none">
+              v{__APP_VERSION__}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <LanguageSwitcher compact />
@@ -341,9 +344,14 @@ export function AppContent() {
               />
             </div>
             <div className="flex flex-col">
-              <span className="text-base sm:text-lg font-bold tracking-tight text-white whitespace-nowrap leading-tight">
-                {t.common.appName}
-              </span>
+              <div className="flex items-start gap-1.5">
+                <span className="text-base sm:text-lg font-bold tracking-tight text-white whitespace-nowrap leading-tight">
+                  {t.common.appName}
+                </span>
+                <span className="px-1.5 py-0.5 text-[10px] font-mono font-medium text-indigo-300/90 bg-indigo-950/60 border border-indigo-800/50 rounded-md leading-none select-none shrink-0 -mt-0.5">
+                  v{__APP_VERSION__}
+                </span>
+              </div>
               <span className="hidden md:inline-block text-[10px] text-slate-400 font-normal leading-tight mt-0.5">
                 {t.common.appSubtitle}
               </span>
