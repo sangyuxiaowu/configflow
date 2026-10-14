@@ -1,6 +1,6 @@
 [package]
 name = "configflow"
-version = "1.1.0"
+version = "1.1.1"
 description = "ConfigFlow desktop application"
 authors = ["ConfigFlow"]
 edition = "2021"
