@@ -16,18 +16,10 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       mode !== 'test' && react(),
       tailwindcss(),
-      command === 'build' && !isTauriMode && mode !== 'test' && VitePWA({
-        registerType: 'autoUpdate',
-        includeAssets: [
-          'favicon.ico',
-          'favicon-32x32.png',
-          'apple-touch-icon.png',
-          'icon.svg',
-          'icon-maskable.svg',
-          'pwa-192x192.png',
-          'pwa-512x512.png',
-          'pwa-maskable-512x512.png',
-        ],
+      VitePWA({
+        disable: isTauriMode || mode === 'test',
+        registerType: 'prompt',
+        includeManifestIcons: false,
         manifest: {
           id: base,
           name: 'OpsConfig Studio 配置文件系统',
@@ -70,6 +62,7 @@ export default defineConfig(({ command, mode }) => {
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+          cleanupOutdatedCaches: true,
         },
       }),
     ],

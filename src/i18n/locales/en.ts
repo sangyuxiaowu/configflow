@@ -276,6 +276,13 @@ export const enLocale: TranslationDictionary = {
     howToInstallDesc: 'In Chrome, Edge, or other Chromium browsers, click the install icon in the address bar, or choose "Save and share -> Install OpsConfig Studio" from the menu.',
     pwaFeatures: 'PWA Features Supported',
     offlineModeNotice: 'Offline Mode — PWA local cache activated, workspace is fully operational',
+    updateAvailableTitle: 'New Version Available',
+    updateAvailableDesc: 'A new version is ready. Click "Update Now" to load the latest features and UI improvements.',
+    updateNow: 'Update Now',
+    updating: 'Updating...',
+    updateLater: 'Later',
+    updateReadyBadge: 'Update Available',
+    offlineReadyNotice: 'PWA offline cache is ready for offline use',
   },
 
   validation: {

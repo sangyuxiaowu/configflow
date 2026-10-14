@@ -276,6 +276,13 @@ export const zhLocale: TranslationDictionary = {
     howToInstallDesc: '在 Chrome、Edge 或其他 Chromium 浏览器中，点击地址栏右侧的「安装」图标，或通过右上角菜单选择「保存并共享 → 安装 OpsConfig Studio」。',
     pwaFeatures: 'PWA 特性支持',
     offlineModeNotice: '离线模式 — 已激活 PWA 本地缓存，可正常使用工作区',
+    updateAvailableTitle: '发现新版本可用',
+    updateAvailableDesc: '新版本已下载就绪，点击「立即更新」即可加载最新功能与界面优化。',
+    updateNow: '立即更新',
+    updating: '正在更新...',
+    updateLater: '稍后',
+    updateReadyBadge: '有新版本可用',
+    offlineReadyNotice: 'PWA 离线缓存已就绪，支持无网环境随时使用',
   },
 
   validation: {

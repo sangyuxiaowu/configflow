@@ -16,6 +16,7 @@ import { inferSchemaFromJson, resolveSchemaPackageFromJson } from './utils/schem
 import { fetchRemoteJson } from './utils/remoteConfig';
 import { ConfigLoadModal, ConfigLoadResult } from './components/common/ConfigLoadModal';
 import { PWAInstallButton } from './components/pwa/PWAInstallButton';
+import { PWAUpdatePrompt } from './components/pwa/PWAUpdatePrompt';
 import { OfflineIndicator } from './components/pwa/OfflineIndicator';
 import { I18nProvider, useI18n, LanguageSwitcher } from './i18n';
 
@@ -460,6 +461,7 @@ export default function App() {
     <I18nProvider>
       <ToastProvider>
         <AppContent />
+        <PWAUpdatePrompt />
       </ToastProvider>
     </I18nProvider>
   );

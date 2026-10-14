@@ -288,6 +288,13 @@ export interface TranslationDictionary {
     howToInstallDesc: string;
     pwaFeatures: string;
     offlineModeNotice: string;
+    updateAvailableTitle: string;
+    updateAvailableDesc: string;
+    updateNow: string;
+    updating: string;
+    updateLater: string;
+    updateReadyBadge: string;
+    offlineReadyNotice: string;
   };
 
   // Validation messages
